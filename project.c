@@ -31,19 +31,20 @@ void remove_newline(char *str) {
     str[strcspn(str, "\n")] = '\0';
 }
 
-void ecrituredansfichier(FILE *fich, client c1) {
-    fich = fopen("client.txt", "a+");
+void writeClientsToFile(FILE *fich, client c) {
+    fich = fopen("clients.txt", "a+");
     if (fich == NULL) {
-        printf("Impossible d'ouverture de fichier ");
-        return;
+        perror("Error opening file for writing");
+        exit(1);
     }
 
-    fprintf(fich, "%-10d | %-10s | %-10s | %02d/%02d/%04d     | %-17s | %-8s | %-30s | +212 %-10s | %-7d | %-15d\n",
-            c1.idclient, c1.nom, c1.prenom, c1.d.jour, c1.d.mois, c1.d.anne,
-            c1.lieudenaissa, c1.CIN, c1.adress, c1.phone, c1.password, c1.idhistorique);
+
+   fprintf(fich, "%d    | %s    | %s    | %02d/%02d/%04d    | %s    | %s    | %s    | %s    | %d\n",
+            c.idclient, c.nom, c.prenom, c.d.jour, c.d.mois, c.d.anne,
+            c.lieudenaissa, c.CIN, c.adress, c.phone,
+            c.password);
 
     fclose(fich);
-    clear_screen();
 }
 
 void gotoxy(int x, int y) {
@@ -57,7 +58,7 @@ int getLastClientId(FILE *fich) {
     int lastId = 100000;
     int tempId;
 
-    fich = fopen("client.txt", "r");
+    fich = fopen("clients.txt", "r");
     if (fich == NULL) {
         printf("Fichier non trouve. Initialisation de l'ID à %d.\n", lastId);
         return lastId;
@@ -75,6 +76,29 @@ int getLastClientId(FILE *fich) {
     fclose(fich);
     return lastId;
 }
+int getLastIdHistorique(FILE *fich) {
+    int lastIdHis = 1;
+    int tempIdHis;
+    
+    fich = fopen("clients.txt", "r");
+    if (fich == NULL) {
+        printf("Fichier non trouve.", lastIdHis);
+        return lastIdHis;
+    }
+
+    char line[200];
+    while (fgets(line, sizeof(line), fich) != NULL) {
+        if (sscanf(line, "%*d %*s %*s %*d/%*d/%*d %*s %*s %*s %*s %*d %d", &tempIdHis) == 1) {
+            if (tempIdHis >= lastIdHis) {
+                lastIdHis = tempIdHis + 1; 
+            }
+        }
+    }
+
+    fclose(fich);
+    return lastIdHis;
+}
+
 void quitter(){
                 system("cls");
             gotoxy(32,5);
@@ -91,7 +115,9 @@ void quitter(){
             for(int i =0 ;i<5 ;i++){   
                 printf("|");
             }
-            printf("--------------------------------------------");          
+            printf("--------------------------------------------");
+            exit(0);
+                  
 }
 void erreur(){
        system("cls");
@@ -101,7 +127,6 @@ void erreur(){
                 printf("|");
             }
             printf("--------------------------------------------");
-            
             gotoxy(67,10);
             printf("erreur de saisir  :\n");
             gotoxy(32,15);
@@ -109,7 +134,7 @@ void erreur(){
             for(int i =0 ;i<5 ;i++){   
                 printf("|");
             }
-            printf("--------------------------------------------");       
+            printf("--------------------------------------------");     
     
 }
 void afficher_menu() {
@@ -197,20 +222,8 @@ int CREATIONDECOMPTE(FILE* fich) {
     char choix = 'N';
     int lastId = getLastClientId(fich);
     c1.idclient = lastId + 1;
+    c1.idhistorique= getLastIdHistorique(fich);
     
-
-    int lastIdhis = 1;
-    fich = fopen("client.txt", "r");
-    if (fich != NULL) {
-        char line[200];
-        while (fgets(line, sizeof(line), fich) != NULL) {
-            if (sscanf(line, "ID HISTORIQUE : %d", &lastIdhis) == 1) {
-                lastIdhis++;
-            }
-        }
-        fclose(fich);
-    }
-    c1.idhistorique = lastIdhis;
 
     int x = 30, y = 2;
     do {
@@ -236,9 +249,10 @@ int CREATIONDECOMPTE(FILE* fich) {
             gotoxy(x, y++);
             printf("Donner votre date de naissance (JJ MM AAAA): ");
             scanf("%d %d %d", &c1.d.jour, &c1.d.mois, &c1.d.anne);
-            while (getchar() != '\n'); // Flush remaining characters
+            while (getchar() != '\n'); 
 
             if (c1.d.jour > 31 || c1.d.mois > 12 || c1.d.anne < 1900 || c1.d.anne > 9999) {
+                gotoxy(x,y++);
                 printf("Date incorrecte ! Veuillez entrer une date valide.\n");
             }
         } while (c1.d.jour > 31 || c1.d.mois > 12 || c1.d.anne < 1900 || c1.d.anne > 9999);
@@ -261,10 +275,11 @@ int CREATIONDECOMPTE(FILE* fich) {
         do {
             gotoxy(x, y++);
             printf("Donner votre numero de telephone : +212 ");
-            scanf("%s", c1.phone);
+            scanf("%9s", c1.phone);
             while (getchar() != '\n'); 
 
             if (strlen(c1.phone) != 9) {
+                gotoxy(x,y++);
                 printf("Le numero est incorrect ! Il doit contenir exactement 9 chiffres.\n");
             }
         } while (strlen(c1.phone) != 9);
@@ -276,21 +291,72 @@ int CREATIONDECOMPTE(FILE* fich) {
     } while (choix == 'N' || choix =='n');
 
     gotoxy(x, y++);
+    
     printf("TU peux donner le mot de passe (4 chiffres) : ");
     scanf("%d", &c1.password);
-    while (getchar() != '\n'); 
+  
+   
+    
+
 
     system("cls");
     gotoxy(x, y++);
     printf("Ton compte a ete enregistre avec succes. ");
-    ecrituredansfichier(fich, c1);
+    writeClientsToFile(fich,c1);
 
     return 0;
 }
+void readClientsFromFile(FILE *fich) {
+    fich = fopen("clients.txt", "r");
+    if (fich == NULL) {
+        perror("Error opening file for reading");
+        exit(1);
+    }
+
+    char line[200];
+
+    
+    fgets(line, sizeof(line), fich);
+    fgets(line, sizeof(line), fich);
+
+    printf("Liste des clients :\n");
+    while (fgets(line, sizeof(line), fich) != NULL) {
+        client client;
+
+        
+        if (sscanf(line, "%d | %19[^|] | %19[^|] | %d/%d/%d | %19[^|] | %19[^|] | %99[^|] | %19[^|] | %d | %d",
+                   &client.idclient, client.nom, client.prenom,
+                   &client.d.jour, &client.d.mois, &client.d.anne,
+                   client.lieudenaissa, client.CIN, client.adress, client.phone,
+                   &client.password, &client.idhistorique) == 12) {
+           
+            printf("ID: %d, Name: %s, Surname: %s, Birth Date: %d/%d/%d, Birth Place: %s, CIN: %s, Address: %s, Phone: %s, Password: %d, Historical ID: %d\n",
+                   client.idclient, client.nom, client.prenom, 
+                   client.d.jour, client.d.mois, client.d.anne,
+                   client.lieudenaissa, client.CIN, client.adress, client.phone,
+                   client.password, client.idhistorique);
+        } else {
+            printf("Error parsing client data\n");
+        }
+    }
+
+    fclose(fich);
+}
+
+/*
+
+    char line[200];
+    while (fgets(line, sizeof(line), fich) != NULL) {
+        if (sscanf(line, "%*d %*s %*s %*d/%*d/%*d %*s %*s %*s %*s %*d %d", &tempIdHis) == 1) {
+            if (tempIdHis >= lastIdHis) {
+                lastIdHis = tempIdHis + 1; 
+            }
+        }
+    }*/
 int AFFICHAGEDECOMPTE(FILE* fich, int clientid){
      int choix=0;
      system("Cls");
-
+    client c1;
     int x = 30;
     int y = 2;  
   
@@ -325,11 +391,13 @@ int AFFICHAGEDECOMPTE(FILE* fich, int clientid){
   
     printf("donner votre choix : ");
     scanf("\t%d",&choix);
-    
+    printf("You entered case: %d\n", choix);
+
         switch (choix)
         {
         case 1:
-           
+       system("cls");
+        readClientsFromFile(fich);
             
             break;
         case 2:
@@ -359,10 +427,10 @@ int main() {
     SetConsoleOutputCP(65001);
     system("COLOR 0A");
     loadingPage();
-    afficher_menu();
-    
+    afficher_menu();    
     return 0;
 }
+
 void box(int x, int y, int X, int Y){
 
   int i,j;
@@ -387,7 +455,6 @@ void box(int x, int y, int X, int Y){
       }
   }
 }
-
 void secBox(char a[]){
 
     int i, j;
@@ -417,7 +484,6 @@ void secBox(char a[]){
         printf("\n");
     }
 }
-
 void loadingPage(){
     int a, i;
     clear_screen();
@@ -434,9 +500,6 @@ void loadingPage(){
         gotoxy(a++, 10);
     }
 }
-
-
-
 void delay(unsigned int x){
 
     int i, j;
