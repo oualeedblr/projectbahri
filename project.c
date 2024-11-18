@@ -12,16 +12,23 @@ typedef struct {
 
 typedef struct {
     int idclient;
-    int idhistorique;
-    int password;
     char CIN[20];
     char nom[20];
     char prenom[20];
+    char sexe;
     char adress[100];
     char phone[20];
     date d;
     char lieudenaissa[20];
 } client;
+typedef struct {
+int solde;
+int Ncompte;
+int idhistorique;
+int password;
+date dcreation;
+char typecompte[20];
+}compte;
 
 void clear_screen() {
     system("cls");
@@ -31,7 +38,7 @@ void remove_newline(char *str) {
     str[strcspn(str, "\n")] = '\0';
 }
 
-void writeClientsToFile(FILE *fich, client c) {
+void ECRIRELESCLIENTS(FILE *fich, client c) {
     fich = fopen("clients.txt", "a+");
     if (fich == NULL) {
         perror("Error opening file for writing");
@@ -39,12 +46,28 @@ void writeClientsToFile(FILE *fich, client c) {
     }
 
 
-   fprintf(fich, "%d    | %s    | %s    | %02d/%02d/%04d    | %s    | %s    | %s    | %s    | %d\n",
+   fprintf(fich, "%-10d | %-10s | %-10s | %02d/%02d/%04d  | %-17s | %-8s | %-30s | +212 %-10s | %c \n",
             c.idclient, c.nom, c.prenom, c.d.jour, c.d.mois, c.d.anne,
             c.lieudenaissa, c.CIN, c.adress, c.phone,
-            c.password);
+            c.sexe);
 
     fclose(fich);
+
+}
+void ECRIRELESCOMPTES(FILE *fich,compte c,client cl) {
+    fich = fopen("comptes.txt", "a+");
+    if (fich == NULL) {
+        perror("Error opening file for writing");
+        exit(1);
+    }
+
+
+   fprintf(fich, "%-10d | %-10s | %-10s |     %02d/%02d/%04d    | %-15s | %-9d  |   %-4d   | %-5d\n",
+            c.Ncompte, cl.nom, cl.prenom, c.dcreation.jour, c.dcreation.mois, c.dcreation.anne,
+            c.typecompte, c.solde,c.password,c.idhistorique);
+
+    fclose(fich);
+
 }
 
 void gotoxy(int x, int y) {
@@ -60,7 +83,7 @@ int getLastClientId(FILE *fich) {
 
     fich = fopen("clients.txt", "r");
     if (fich == NULL) {
-        printf("Fichier non trouve. Initialisation de l'ID à %d.\n", lastId);
+        printf("Fichier non trouve.");
         return lastId;
     }
 
@@ -80,7 +103,7 @@ int getLastIdHistorique(FILE *fich) {
     int lastIdHis = 1;
     int tempIdHis;
     
-    fich = fopen("clients.txt", "r");
+    fich = fopen("comptes.txt", "r");
     if (fich == NULL) {
         printf("Fichier non trouve.", lastIdHis);
         return lastIdHis;
@@ -88,7 +111,7 @@ int getLastIdHistorique(FILE *fich) {
 
     char line[200];
     while (fgets(line, sizeof(line), fich) != NULL) {
-        if (sscanf(line, "%*d %*s %*s %*d/%*d/%*d %*s %*s %*s %*s %*d %d", &tempIdHis) == 1) {
+        if (sscanf(line, "%*d | %*[^|] | %*[^|] | %*[^|] | %*[^|] | %*[^|] | %*[^|] | %d", &tempIdHis) == 1) {
             if (tempIdHis >= lastIdHis) {
                 lastIdHis = tempIdHis + 1; 
             }
@@ -99,7 +122,7 @@ int getLastIdHistorique(FILE *fich) {
     return lastIdHis;
 }
 
-void quitter(){
+void NOTIFICATION(char *std){
                 system("cls");
             gotoxy(32,5);
             printf("--------------------------------------------");
@@ -109,7 +132,7 @@ void quitter(){
             printf("--------------------------------------------");
             
             gotoxy(67,10);
-            printf("Merci pour votre Visite ..... ");
+            printf("%s",std);
             gotoxy(32,15);
             printf("--------------------------------------------");
             for(int i =0 ;i<5 ;i++){   
@@ -119,31 +142,11 @@ void quitter(){
             exit(0);
                   
 }
-void erreur(){
-       system("cls");
-            gotoxy(32,5);
-            printf("--------------------------------------------");
-            for(int i =0 ;i<5 ;i++){   
-                printf("|");
-            }
-            printf("--------------------------------------------");
-            gotoxy(67,10);
-            printf("erreur de saisir  :\n");
-            gotoxy(32,15);
-            printf("--------------------------------------------");
-            for(int i =0 ;i<5 ;i++){   
-                printf("|");
-            }
-            printf("--------------------------------------------");     
-    
-}
 void afficher_menu() {
     int choix=0;
-    int x = 30;
+    int x = 50;
     int y = 2;  
     client c;
-    int idclient;
-    double montant;
     FILE* fich;
     date d;
     system("cls");
@@ -153,25 +156,13 @@ void afficher_menu() {
     printf("▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓ MAIN MENU ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓\n");
 
     gotoxy(x, y++);
-    printf("▓▓▓▓▓▓▓▓▓▓▓▓▓░ 1-CREATION DE COMPTE .\n");
+    printf("▓▓▓▓▓▓▓▓▓▓▓▓▓░ 1-SIGN IN  .\n");
 
     gotoxy(x, y++);
-    printf("▓▓▓▓▓▓▓▓▓▓▓▓▓░ 2-AFFICHAGE DE COMPTE .\n");
+    printf("▓▓▓▓▓▓▓▓▓▓▓▓▓░ 2-LOGIN  .\n");
 
     gotoxy(x, y++);
-    printf("▓▓▓▓▓▓▓▓▓▓▓▓▓░ 3-FAIRE UNE TRANSACTION .\n");
-
-    gotoxy(x, y++);
-    printf("▓▓▓▓▓▓▓▓▓▓▓▓▓░ 4-EFFECTUER UN RETRAIT  .\n");
-
-    gotoxy(x, y++);
-    printf("▓▓▓▓▓▓▓▓▓▓▓▓▓░ 5-EFFECTUER UN DÉPÔT .\n");
-
-     gotoxy(x, y++);
-    printf("▓▓▓▓▓▓▓▓▓▓▓▓▓░ 6-SUPPRIMER LE COMPTE .\n");
-
-    gotoxy(x, y++);
-    printf("▓▓▓▓▓▓▓▓▓▓▓▓▓░ 7-QUITTER L'APPLICATION.\n");
+    printf("▓▓▓▓▓▓▓▓▓▓▓▓▓░ 3-QUITTER L'APPLICATION.\n");
 
     gotoxy(x, y++);
     printf("▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓\n");
@@ -183,49 +174,39 @@ void afficher_menu() {
         case 1:
             system("cls");
             loadingPage();
-            CREATIONDECOMPTE(fich);
+            SIGNIN(fich);
             break;
         case 2:
             system("cls");
             loadingPage();
-            AFFICHAGEDECOMPTE(fich,idclient);
             break;
         case 3:
-         
-            break;
-        case 4:
-           
-            break;
-        case 5:
-            
-            break;
-         case 6:
-          
-            break;
-        case 7:
         clear_screen();
         loadingPage();
-            quitter();
+        NOTIFICATION(" MERCI POUR VOTRE VISITE .....\n");
             break;
         default:
         clear_screen();
         loadingPage();
-            erreur();
+        printf("erruer de sasair \n");
+        afficher_menu();
             break;
         }
-    } while (choix != 6);
+    } while (choix != 3);
     
 }
-int CREATIONDECOMPTE(FILE* fich) {
+int SIGNIN(FILE* fich) {
     system("Cls");
     client c1;
+    compte c;
     char choix = 'N';
     int lastId = getLastClientId(fich);
     c1.idclient = lastId + 1;
-    c1.idhistorique= getLastIdHistorique(fich);
+    c.idhistorique= getLastIdHistorique(fich);
     
 
     int x = 30, y = 2;
+
     do {
         gotoxy(x, y++);
         printf("▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓ CREATION DE COMPTE ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓\n");
@@ -236,15 +217,17 @@ int CREATIONDECOMPTE(FILE* fich) {
         gotoxy(x, y++);
         printf("Donner votre nom:  \t ");
         fgets(c1.nom, sizeof(c1.nom), stdin);
-        
         remove_newline(c1.nom);
         
         gotoxy(x, y++);
         printf(" Donner votre prenom: \t");
         fgets(c1.prenom, sizeof(c1.prenom), stdin);
-        
         remove_newline(c1.prenom);
-
+       
+        gotoxy(x, y++);
+        printf(" Donner votre sexe ( Homme:H / Femme:F): \t");
+        scanf("%c",&c1.sexe);
+        while(getchar() != '\n');
         do {
             gotoxy(x, y++);
             printf("Donner votre date de naissance (JJ MM AAAA): ");
@@ -261,12 +244,15 @@ int CREATIONDECOMPTE(FILE* fich) {
         printf("Donner votre lieu de naissance :\t");
         fgets(c1.lieudenaissa, sizeof(c1.lieudenaissa), stdin);
         remove_newline(c1.lieudenaissa);
-
+        gotoxy(x,y++);
+        printf("Donner le type de compte (professionel/individuel): \t");
+        fgets(c.typecompte, sizeof(c.typecompte), stdin);
+        remove_newline(c.typecompte);
         gotoxy(x, y++);
         printf("Donner votre numero de carte national (CIN): \t");
         fgets(c1.CIN, sizeof(c1.CIN), stdin);
         remove_newline(c1.CIN);
-
+        
         gotoxy(x, y++);
         printf("Donner votre adresse : \t ");
         fgets(c1.adress, sizeof(c1.adress), stdin);
@@ -283,7 +269,10 @@ int CREATIONDECOMPTE(FILE* fich) {
                 printf("Le numero est incorrect ! Il doit contenir exactement 9 chiffres.\n");
             }
         } while (strlen(c1.phone) != 9);
-
+        gotoxy(x, y++);
+        printf("Entrer le dépôt initial: \t ");
+        scanf("%d", c.solde);
+        while (getchar() != '\n'); 
         gotoxy(x, y++);
         printf("TU PEUX SAUVEGARDER VOTRE INFORMATIONS O/N : \n");
         scanf(" %c", &choix);
@@ -293,20 +282,15 @@ int CREATIONDECOMPTE(FILE* fich) {
     gotoxy(x, y++);
     
     printf("TU peux donner le mot de passe (4 chiffres) : ");
-    scanf("%d", &c1.password);
-  
-   
-    
-
-
+    scanf("%d", &c.password);
     system("cls");
     gotoxy(x, y++);
     printf("Ton compte a ete enregistre avec succes. ");
-    writeClientsToFile(fich,c1);
-
+    ECRIRELESCLIENTS(fich,c1);
+    ECRIRELESCOMPTES(fich,c,c1);
     return 0;
 }
-void readClientsFromFile(FILE *fich) {
+void LIRECLIENTS(FILE *fich) {
     fich = fopen("clients.txt", "r");
     if (fich == NULL) {
         perror("Error opening file for reading");
@@ -322,21 +306,21 @@ void readClientsFromFile(FILE *fich) {
     printf("Liste des clients :\n");
     while (fgets(line, sizeof(line), fich) != NULL) {
         client client;
-
+        compte c;
         
-        if (sscanf(line, "%d | %19[^|] | %19[^|] | %d/%d/%d | %19[^|] | %19[^|] | %99[^|] | %19[^|] | %d | %d",
+        if (sscanf(line, "%*d | %19[^|] | %19[^|] | %d/%d/%d | %19[^|] | %19[^|] | %99[^|] | %19[^|] | %d | %*d",
                    &client.idclient, client.nom, client.prenom,
                    &client.d.jour, &client.d.mois, &client.d.anne,
                    client.lieudenaissa, client.CIN, client.adress, client.phone,
-                   &client.password, &client.idhistorique) == 12) {
+                   &client.sexe) == 9) {
            
-            printf("ID: %d, Name: %s, Surname: %s, Birth Date: %d/%d/%d, Birth Place: %s, CIN: %s, Address: %s, Phone: %s, Password: %d, Historical ID: %d\n",
+            printf(" Nom: %s, Prenom: %s, date de naissance: %d/%d/%d, lieu de naissance: %s, CIN: %s, Address: %s, Phone: +212 %s, Sexe : %s\n",
                    client.idclient, client.nom, client.prenom, 
                    client.d.jour, client.d.mois, client.d.anne,
                    client.lieudenaissa, client.CIN, client.adress, client.phone,
-                   client.password, client.idhistorique);
+                   client.sexe);
         } else {
-            printf("Error parsing client data\n");
+            printf("erreur de lire les clients\n");
         }
     }
 
@@ -353,19 +337,19 @@ void readClientsFromFile(FILE *fich) {
             }
         }
     }*/
-int AFFICHAGEDECOMPTE(FILE* fich, int clientid){
+int PAGEPROFIL(FILE* fich){
      int choix=0;
      system("Cls");
     client c1;
-    int x = 30;
-    int y = 2;  
+    int x = 45;
+    int y = 5;  
   
     date d;
     
  do
     {
     gotoxy(x,y++);
-    printf("▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓ AFFICHAGE DE COMPTE  ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓\n");
+    printf("▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓ PAGE DE PROFIL  ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓\n");
 
     gotoxy(x, y++);
     printf("▓▓▓▓▓▓▓▓▓▓▓▓▓░ 1-AFFICHER  VOTRE INFORMATIONS PERSONNELES .\n");
@@ -391,13 +375,13 @@ int AFFICHAGEDECOMPTE(FILE* fich, int clientid){
   
     printf("donner votre choix : ");
     scanf("\t%d",&choix);
-    printf("You entered case: %d\n", choix);
+    
 
         switch (choix)
         {
         case 1:
        system("cls");
-        readClientsFromFile(fich);
+        LIRECLIENTS(fich);
             
             break;
         case 2:
@@ -416,7 +400,7 @@ int AFFICHAGEDECOMPTE(FILE* fich, int clientid){
             afficher_menu();
             break;
         default:
-            erreur();
+            NOTIFICATION("erreur de saisir...  \n");
             break;
         }
     } while (choix != 6);
@@ -487,11 +471,11 @@ void secBox(char a[]){
 void loadingPage(){
     int a, i;
     clear_screen();
-    gotoxy(22,7);
+    gotoxy(45,7);
     puts("*********** NOW LOADING ***********");
-    gotoxy(15, 9);
+   /* gotoxy(15, 9);
     box(50, 3, 15, 9);
-    gotoxy(16,10);
+    gotoxy(16,10);*/
 
     a= 16;
     for(i = 1; i < 50; i++){

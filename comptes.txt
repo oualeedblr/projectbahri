@@ -1,0 +1,3 @@
+N_COMPTE   |    NOM     | PRENOM     | DATE_DE_CREATION  | TYPE DE COMPTE  | SODLE      | PASSWORD | ID HISTORIQUE
+----------------------------------------------------------------------------------------------------------------
+ 
