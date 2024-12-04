@@ -1,3 +1,1 @@
-N_COMPTE   |    NOM     | PRENOM     | DATE_DE_CREATION  | TYPE DE COMPTE  | SODLE      | PASSWORD | ID HISTORIQUE
-----------------------------------------------------------------------------------------------------------------
- 
+11111 chehba brahim 3/12/2024 individuel 700000 1111 1
