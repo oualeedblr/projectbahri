@@ -633,8 +633,182 @@ void LIRECLIENTS(FILE *fich) {
 
     fclose(fich);
 }
+void function_verment() {
+    int id_transfert, id_destinataire;
+    float sold_verement;
+    client client_client;
+    client client_destinataire;
+    date date_verment;
+    date date_Actuelle;
+
+    system("color 0A");
+    gotoxy(2, 2);
+    printf("\t");
+    printf("**********************\n");
+    gotoxy(2, 3);
+    printf("\t");
+    printf("   information : Transfert entre deux comptes de la même banque  \n");
+    gotoxy(2, 4);
+    printf("\t");
+    printf("**********************\n");
+    printf("\n");
+    gotoxy(2, 5);
+    printf("\t");
+    printf("┌────────────────────────────────────────────────────────────────────────────┐");
+
+    gotoxy(2, 6);
+    printf("\t");
+    printf("│                       ** ✉️ Vérment  **                               │");
+
+    gotoxy(2, 7);
+    printf("\t");
+    printf("│                                                                            │");
+
+    gotoxy(2, 8);
+    printf("\t");
+    printf("│  ▓▓▓ Entrer votre identifiant :                                            │");
+
+    gotoxy(2, 9);
+    printf("\t");
+    printf("│  ▓▓▓ Entrer identifiant de destinataire  :                                 │");
+    printf("\n");
+    gotoxy(2, 10);
+    printf("\t");
+    printf("|  ▓▓▓ Entrer sold de verement :                                             |");
+    printf("\n");
+    gotoxy(2, 11);
+    printf("\t");
+    gotoxy(2, 12);
+    printf("\t");
+    printf("└────────────────────────────────────────────────────────────────────────────┘");
+    gotoxy(5, 14);
+    printf("\t");
+    tim_function();
+
+    gotoxy(48, 8);
+    scanf("%d", &id_transfert);
+    gotoxy(55, 9);
+    scanf("%d", &id_destinataire);
+    gotoxy(45, 10);
+    scanf("%f", &sold_verement);
+
+    // Ouverture des fichiers
+    FILE *fichies_compt = fopen("fichiescompt.txt", "rt");
+    if (fichies_compt == NULL) {
+        printf("Problème dans le fichier \n");
+        exit(1);
+    }
+    FILE *modVerment = fopen("FILEmodever.txt", "at+");
+    if (modVerment == NULL) {
+        printf("Problème serveur ! ");
+        exit(1);
+    }
+
+    int Compt1Trouver = 0;
+    int Compt3Trouver = 0;
+    int soldDispo = 0;
+
+    // Test sur le solde (est-il positif ?)
+    if (sold_verement <= 0) {
+        system("cls");
+        gotoxy(2, 5);
+        printf("┌────────────────────────────────────────────────────────────────────────────┐");
+
+        gotoxy(2, 6);
+        printf("│                     ⚠️ Le montant n'est pas convenable ⚠️                   │");
+
+        gotoxy(2, 7);
+        printf("└────────────────────────────────────────────────────────────────────────────┘");
+        getch();
+        system("cls");
+        interface1();
+    }
+
+    // Requête des données du fichier
+    while (fscanf(fichies_compt, "%d\n%s\n%f\n%d\n%d\n", &client_client.c.Ncompte, client_client.c.typecompte, &client_client.c.solde, &client_client.c.password, &client_client.idclient) == 5) {
+        // Test sur les données du client (existe et solde disponible) :
+        if (client_client.c.Ncompte == id_transfert) {
+            Compt1Trouver++;
+            if (client_client.c.solde >= sold_verement) {
+                soldDispo++;
+            }
+        }
+    }
+
+    // Chercher le client destinataire si les conditions sont vérifiées
+    if (Compt1Trouver != 0 && soldDispo != 0) {
+        // Chercher le destinataire :
+        while (fscanf(fichies_compt, "%d\n%s\n%f\n%d\n%d\n", &client_destinataire.c.Ncompte, client_destinataire.c.typecompte, &client_destinataire.c.solde, &client_destinataire.c.password, &client_destinataire.idclient) == 5) {
+            if (client_destinataire.c.Ncompte == id_destinataire) {
+                // Effectuer l'opération sur le compte : solde = solde + solde envoyé
+                client_destinataire.c.solde += sold_verement;
+                Compt3Trouver++;
+            }
+            // Modifier le solde :
+            fprintf(modVerment, "%d\n%s\n%f\n%d\n%d\n", client_destinataire.c.Ncompte, client_destinataire.c.typecompte, client_destinataire.c.solde, client_destinataire.c.password, client_destinataire.idclient);
+        }
+    }
+
+    fclose(modVerment);
+    fclose(fichies_compt);
+
+    // Traitement sur les fichiers pour mettre à jour les soldes
+    modVerment = fopen("FILEmodever.txt", "rt");
+    if (modVerment == NULL) {
+        printf("Problème fichier : ");
+        exit(1);
+    }
+    fichies_compt = fopen("fichiesNvtest.txt", "at+");
+    if (fichies_compt == NULL) {
+        printf("Problème d'ouverture du fichier \n");
+        exit(1);
+    }
+
+    while (fscanf(modVerment, "%d\n%s\n%f\n%d\n%d\n", &client_client.c.Ncompte, client_client.c.typecompte, &client_client.c.solde, &client_client.c.password, &client_client.idclient) == 5) {
+        if (client_client.c.Ncompte == id_transfert) {
+            client_client.c.solde -= sold_verement;
+        }
+        fprintf(fichies_compt, "%d\n%s\n%f\n%d\n%d\n", client_client.c.Ncompte, client_client.c.typecompte, client_client.c.solde, client_client.c.password, client_client.idclient);
+    }
+
+    fclose(fichies_compt);
+
+    // Si le virement a été effectué avec succès
+    if (Compt1Trouver != 0 && Compt3Trouver != 0 && soldDispo != 0) {
+        system("cls");
+        gotoxy(2, 5);
+        printf("┌────────────────────────────────────────────────────────────────────────────┐");
+
+        gotoxy(2, 6);
+        printf("│                                                                            │");
+
+        gotoxy(2, 7);
+        printf("│                ✅  VIREMENT EFFECTUÉ AVEC SUCCÈS  ✅                      │");
+
+        gotoxy(2, 8);
+        printf("│    Le montant a été transféré avec succès vers le compte destinataire      │");
+
+        gotoxy(2, 9);
+        printf("└────────────────────────────────────────────────────────────────────────────┘");
+
+        // Si le virement est effectué, on copie les données dans l'historique
+        FILE *fichies_historique = fopen("fichieshistorique.text", "at+");
+        if (fichies_historique == NULL) {
+            printf("L'ouverture du fichier contient des erreurs ");
+            exit(1);
+        }
+        // Copie des données du virement dans le fichier historique
+        fprintf(fichies_historique, "%d\n%d\n%d%d%d\n%s\n", id_transfert, id_destinataire, date_verment.jour, date_verment.mois, date_verment.anne, sold_verement);
+    } else {
+        // Gestion des erreurs si le virement n'a pas pu être effectué
+        system("cls");
+        gotoxy(2, 13);
+        printf("* Le virement n'a pas pu être effectué. Vérifiez les données et réessayez. *\n");
+        function_verment();
+    }
+}
 void afficher_compte(int numcompte) {
-    FILE *fich = fopen("comptes.txt", "r");
+    FILE *fich = fopen("temp.txt", "r");
     if (fich == NULL) {
         printf("Erreur d'ouverture du fichier.\n");
         return;
@@ -717,51 +891,65 @@ void modifier_adress_client(FILE* fich, client cl, compte c) {
         printf("Info du client modifiée avec succès\n");
     }
 }
-void modifier_client_telephone(FILE* fich,client cl,compte c) {
-    char *nouvelle_telephone_saisie;
+void modifier_client_telephone(FILE* fich, client cl, compte c) {
+    char nouvelle_telephone_saisie[20];
     int N_compte_saisie;
-    printf("Donner la nouvelle numero de telephone: \n");
-    scanf("%s",nouvelle_telephone_saisie);
-    printf("Pour la confirmation : \n");
-    printf("donner votre numero de compte : \t");
-    scanf("%d",&N_compte_saisie);
-        char ligne[200];
-        int trouve = 0;
-        int N_compte_cher;
-    
 
-    fich = fopen("clients.txt", "r+");
+    printf("Donner le nouveau numéro de téléphone : \n");
+    scanf("%s", nouvelle_telephone_saisie);
+
+    printf("Pour la confirmation : \n");
+    printf("Donner votre numéro de compte : \t");
+    scanf("%d", &N_compte_saisie);
+
+    fich = fopen("clients.txt", "r");
     if (fich == NULL) {
-        printf("Problème de lire le fichier\n");
+        printf("Problème pour lire le fichier\n");
         exit(1);
     }
-    FILE* temp_fich=fopen("temp.txt","w+");
-     if ((temp_fich) == NULL) {
-        printf("Problème de ecrire dans  le fichier\n");
+
+    FILE* temp_fich = fopen("tempcompte.txt", "w");
+    if (temp_fich == NULL) {
+        printf("Problème pour écrire dans le fichier temporaire\n");
+        fclose(fich);
         exit(1);
     }
+
+    char ligne[200];
+    int trouve = 0;
+    int N_compte_cher;
+
     while (fgets(ligne, sizeof(ligne), fich) != NULL) {
-        if (sscanf(ligne, "%*d | %*[^|] | %*[^|] | %*[^|] | %*[^|] | %*[^|] | %*[^|] | %*[^|] |  %*[^|]  | %*[^|] | %d", &N_compte_cher) == 1) {
+        // Parse le numéro de compte depuis la ligne
+        if (sscanf(ligne, "%*d | %*[^|] | %*[^|] | %*[^|] | %*[^|] | %*[^|] | %*[^|] | %*[^|] | %*[^|] | %d", &N_compte_cher) == 1) {
             if (N_compte_cher == N_compte_saisie) {
+                // Remplacement des données pour ce client
                 trouve = 1;
-                sprintf(ligne, "%d | %s | %s | %d/%d/%d | %s | %s | %s | %s | %c | %s\n", 
-                        cl.idclient, cl.nom, cl.prenom, cl.d.jour, cl.d.mois, cl.d.anne, 
-                        cl.phone, cl.adress, cl.sexe, nouvelle_telephone_saisie);
+                fprintf(temp_fich, "%d | %s | %s | %d/%d/%d | %s | %s | %s | %s | %c | %s\n",
+                        cl.idclient, cl.nom, cl.prenom, cl.d.jour, cl.d.mois, cl.d.anne,
+                        nouvelle_telephone_saisie, cl.adress, cl.sexe, cl.phone);
+            } else {
+                fputs(ligne, temp_fich);
             }
+        } else {
+            fputs(ligne, temp_fich);
         }
-        fputs(ligne,temp_fich);
     }
 
     fclose(fich);
     fclose(temp_fich);
+
+    // Remplacer le fichier original par le fichier temporaire
     remove("clients.txt");
     rename("temp.txt", "clients.txt");
+
     if (!trouve) {
         printf("Client non trouvé\n");
     } else {
         printf("Info du client modifiée avec succès\n");
     }
 }
+
 void MODIFIERCLIENT(FILE* fich,client cl,compte c){
     fich = fopen("clients.txt", "r");
     if (fich == NULL) {
@@ -799,7 +987,7 @@ default:
    
 fclose(fich);
 
-}
+}/*** */
 void modifier_info_client(FILE* fich,client cl,compte c) {
 modifier_adress_client(fich,cl,c);
 modifier_client_telephone(fich,cl,c);
@@ -854,6 +1042,7 @@ void operation_liste(int numcompte){
     int choix = 0;
     printf("1-le depot .\n");
     printf("2-retrait .\n");
+    printf("3-vairement .\n");
     scanf("%d",&choix);
     switch (choix)
     {
@@ -862,7 +1051,10 @@ void operation_liste(int numcompte){
         depot();
         break;
     case 2:
-        faire_retrait(numcompte);
+        retrait();
+        break;
+    case 3 : 
+        function_verment();
         break;
     default:
         break;
@@ -1042,59 +1234,7 @@ void FermetCompt() {
         printf("\n❌ Erreur : Compte introuvable ou mot de passe incorrect ❌\n");
         Sleep(3);
     }
-}
-void Supresion_compt() {
-    int choix;
-
-    system("color 0A");
-    printf("\n**** FERMETURE DE COMPTE ****\n");
-    printf("1. Fermer un compte\n");
-    printf("2. Retourner au menu principal\n");
-    printf("Entrer votre choix : ");
-    scanf("%d", &choix);
-
-    switch (choix) {
-        case 1:
-            system("cls");
-            FermetCompt();
-            break;
-        case 2:
-            system("cls");
-            printf("\nRetour au menu principal...\n");
-            break;
-        default:
-            system("cls");
-            printf("\n⚠️ Choix invalide, retour au menu principal.\n");
-            Sleep(2000);
-            break;
-    }
-}
-/// retourn  id histo
-int retourner_idhistori(int numcompte) {
-    FILE *fich = fopen("comptes.txt", "r");
-    if (fich == NULL) {
-        printf("Erreur d'ouverture du fichier.\n");
-        return;
-    }
-    client cl;
-    int trv = 0;
-    
-    while (fscanf(fich, "%d %s %s %d/%d/%d %s %d %d %d\n", &cl.c.Ncompte, cl.nom, cl.prenom, 
-                  &cl.c.dcreation.jour, &cl.c.dcreation.mois, &cl.c.dcreation.anne, cl.c.typecompte, 
-                  &cl.c.solde, &cl.c.password, &cl.c.h.idhistorique) != EOF) {
-        
-        if (cl.c.Ncompte == numcompte) {
-            return cl.c.h.idhistorique;
-            trv = 1;
-            break; 
-        }
-    }
-
-    if (!trv) {
-        printf("Compte avec le numéro %d non trouvé.\n", numcompte);
-    }
-    fclose(fich);
-}
+}/*
 int modifierSolde(int numeroCompte, int nvsolde) {
     FILE *fich = fopen("comptes.txt", "r");
     if (fich == NULL) {
@@ -1150,156 +1290,226 @@ int modifierSolde(int numeroCompte, int nvsolde) {
     return trouve ; 
 }
 
+*/
+void Supresion_compt() {
+    int choix;
 
-// calculer le solde 
-int calculer_solde(int numcompte,int montant,int numop){
-     FILE *fich = fopen("comptes.txt", "r");
+    system("color 0A");
+    printf("\n**** FERMETURE DE COMPTE ****\n");
+    printf("1. Fermer un compte\n");
+    printf("2. Retourner au menu principal\n");
+    printf("Entrer votre choix : ");
+    scanf("%d", &choix);
+
+    switch (choix) {
+        case 1:
+            system("cls");
+            FermetCompt();
+            break;
+        case 2:
+            system("cls");
+            printf("\nRetour au menu principal...\n");
+            break;
+        default:
+            system("cls");
+            printf("\n⚠️ Choix invalide, retour au menu principal.\n");
+            Sleep(2000);
+            break;
+    }
+}
+/// retourn  id histo
+int retourner_idhistori(int numcompte) {
+    FILE *fich = fopen("comptes.txt", "r");
     if (fich == NULL) {
         printf("Erreur d'ouverture du fichier.\n");
-        exit(1);
+        return;
     }
     client cl;
     int trv = 0;
-    int soldecalcu;
+    
     while (fscanf(fich, "%d %s %s %d/%d/%d %s %d %d %d\n", &cl.c.Ncompte, cl.nom, cl.prenom, 
                   &cl.c.dcreation.jour, &cl.c.dcreation.mois, &cl.c.dcreation.anne, cl.c.typecompte, 
                   &cl.c.solde, &cl.c.password, &cl.c.h.idhistorique) != EOF) {
         
         if (cl.c.Ncompte == numcompte) {
-            if(numop==1){
-            soldecalcu=cl.c.solde-montant;/// retrait 
-            }else if(numop==0){
-            soldecalcu=cl.c.solde+montant;
-            }
-            return soldecalcu;
-            }
+            return cl.c.h.idhistorique;
             trv = 1;
             break; 
         }
-    
+    }
 
     if (!trv) {
         printf("Compte avec le numéro %d non trouvé.\n", numcompte);
     }
     fclose(fich);
 }
-// depot fonction 
-void faire_retrait(int numcompte){
-    /*     print_box_with_title(10,5,100,20,"*******retrait********"); */
-    int mdp_saisie;
-    do{
-    printf("Donner le mot de passe  (4 chiffres) : \n");
-    scanf("%d",&mdp_saisie);
-    if(authentification(numcompte,mdp_saisie)==0){
-        printf("le mot de pass est incorrect\n" );
+
+
+
+// calculer le solde 
+int calculer_solde(int numcompte, int montant, int numop) {
+    FILE *fich = fopen("comptes.txt", "r");
+    if (!fich) {
+        printf("Erreur d'ouverture du fichier.\n");
+        return -1; // Indicate an error
     }
-}while (authentification(numcompte,mdp_saisie)==0);
-   
-    
-    // retourner le num de id historique 
-    int id_histo=retourner_idhistori(numcompte);
-    int solde,montant_saisie;
-    do {
-        printf("donner le montant : \n");
-        scanf("%d",&montant_saisie);
-        solde=calculer_solde(numcompte,montant_saisie,1);
-        if(solde<0){
-            printf("le montant est plus grand \n");
+
+    client cl;
+    while (fscanf(fich, "%d %s %s %d/%d/%d %s %d %d %d\n", 
+                  &cl.c.Ncompte, cl.nom, cl.prenom, &cl.c.dcreation.jour, 
+                  &cl.c.dcreation.mois, &cl.c.dcreation.anne, cl.c.typecompte, 
+                  &cl.c.solde, &cl.c.password, &cl.c.h.idhistorique) != EOF) {
+        
+        if (cl.c.Ncompte == numcompte) {
+            fclose(fich);
+            if (numop == 1) return cl.c.solde - montant; // Retrait
+            if (numop == 0) return cl.c.solde + montant; // Dépôt
         }
-    }while(solde<0);
-    ECRIRELESHISTORIQUE_depot(id_histo,montant_saisie,solde);
-    modifierSolde(numcompte,solde);
+    }
+
+    fclose(fich);
+    printf("Compte avec le numéro %d non trouvé.\n", numcompte);
+    return -1; // Indicate that the account was not found
+}
+int modifierSolde(int idCompte, int nouveauSolde) {
+    FILE *fichierLecture = fopen("comptes.txt", "r");
+    FILE *fichierTemp = fopen("temp.txt", "w");
+    client cl;
+    int trouve = 0;
+
+    if (!fichierLecture || !fichierTemp) {
+        perror("Erreur d'ouverture du fichier");
+        return 0; // Failure
+    }
+
+    while (fscanf(fichierLecture, "%d%s%s%d/%d/%d%s%d%d%d\n",
+                  &cl.c.Ncompte, cl.nom, cl.prenom,
+                  &cl.c.dcreation.jour, &cl.c.dcreation.mois, &cl.c.dcreation.anne,
+                  cl.c.typecompte, &cl.c.solde, &cl.c.password, &cl.c.h.idhistorique) != EOF) {
+
+        if (cl.c.Ncompte == idCompte) {
+            cl.c.solde = nouveauSolde;
+            trouve ++;
+        }
+        fprintf(fichierTemp, "%d %s %s %d/%d/%d %s %d %d %d\n",
+                cl.c.Ncompte, cl.nom, cl.prenom,
+                cl.c.dcreation.jour, cl.c.dcreation.mois, cl.c.dcreation.anne,
+                cl.c.typecompte, cl.c.solde, cl.c.password, cl.c.h.idhistorique);
+    }
+
+    fclose(fichierLecture);
+    fclose(fichierTemp);
+
+if (trouve != 0) {
+    remove("comptes.txt")  ;
+    rename("temp.txt", "comptes.txt") ;
+    printf("Mise à jour réussie.\n");
+    getch();
+    return 1; // Success
+} else {
+    remove("temp.txt");
+    printf("Compte non trouvé.\n");
+    getch();
+    return 0; // Account not found
+}
 }
 void depot() {
-    int idEntrer; 
-    int soldEAjouter; 
-    compte c;
-    client cl; 
-    do{
- system("color 0A"); 
-    gotoxy(2, 2);
-    printf("\t************************\n");
-    gotoxy(2, 3);
-    printf("\t                               Dépot                              \n"); 
-    gotoxy(2, 4);
-    printf("\t************************\n"); 
-    printf("\n");
-    gotoxy(2, 5);
-    printf("\t┌────────────────────────────────────────────────────────────────────────────┐");
-    gotoxy(2, 6);
-    printf("\t│                       ** ✉️ Vérment  **                               │");
-    gotoxy(2, 7);
-    printf("\t│                                                                            │");
-    gotoxy(2, 8);
-    printf("\t│  ▓▓▓ Entrer  identifiant :                                                 │");
-    gotoxy(2, 9); 
-    printf("\n"); 
-    gotoxy(2, 10);
-    printf("\t|  ▓▓▓ Entrer sold de verement :                                             |");
-    printf("\n");
-    gotoxy(2, 11);
-    printf("\t└────────────────────────────────────────────────────────────────────────────┘");
-    gotoxy(5, 14); 
-    tim_function(); 
+    int idEntrer, soldEAjouter, solde;
 
-    gotoxy(48, 8); 
+    printf("Enter Account ID: ");
     scanf("%d", &idEntrer);
-    ;
-    gotoxy(55, 10);
-    scanf("%d", &soldEAjouter); 
-    } while (verification(idEntrer)==0);
-    
-   
 
-    if (soldEAjouter <= 0) {
-        system("cls"); 
-        printf("Problème dans les données entrées : le montant doit être positif.\n");
+    if (verification(idEntrer) == 0) {
+        printf("Account not found.\n");
         return;
     }
-    int vartrouver = 0 ;
-    
-    
-    
+
+    printf("Enter Amount to Deposit: ");
+    scanf("%d", &soldEAjouter);
+
+    if (soldEAjouter <= 0) {
+        printf("Error: Deposit amount must be positive.\n");
+        return;
+    }
+
+    solde = calculer_solde(idEntrer, soldEAjouter, 0);
+    if (solde == -1) {
+        printf("Error: Account not found or calculation error.\n");
+        return;
+    }
+
+    if (!modifierSolde(idEntrer, solde)) {
+        printf("Error updating the account file.\n");
+        return;
+    }
+
+    // Record in history
+    FILE *fichier_historique = fopen("historique.txt", "a+");
+    if (!fichier_historique) {
+        printf("Error opening history file.\n");
+        return;
+    }
+
     time_t current_time = time(NULL);
     struct tm *local_time = localtime(&current_time);
-    c.h.doperation.jour=local_time->tm_mday;
-    c.h.doperation.mois=local_time->tm_mon+1;
-    c.h.doperation.anne=local_time->tm_year + 1900;
 
-    FILE *fichies_historique = fopen("historique.txt", "a+"); 
-    if (fichies_historique == NULL) {
-        printf("Problème d'ouverture du fichier historique.\n");
-        exit(1);
-    }
-    int solde=calculer_solde(idEntrer,soldEAjouter,0);
-    vartrouver =    modifierSolde(idEntrer,solde);
-    
-    
-    int id_hist=retourner_idhistori(idEntrer);
-    if (vartrouver != 0) {
-           fprintf(fichies_historique, "%-12d |        %-11s      | %-12d |    %02d/%02d/%04d    | %d \n",
-            id_hist,"depot",soldEAjouter,c.h.doperation.jour,c.h.doperation.mois,c.h.doperation.anne,solde); 
-        fclose(fichies_historique); 
+    fprintf(fichier_historique, "%-12d | %-11s | %-12d | %02d/%02d/%04d | %d\n",
+            retourner_idhistori(idEntrer), "deposit", soldEAjouter,
+            local_time->tm_mday, local_time->tm_mon + 1, local_time->tm_year + 1900, solde);
+    fclose(fichier_historique);
 
-        system("cls"); 
-        gotoxy(2, 5);
-        printf("┌────────────────────────────────────────────────────────────────────────────┐");
-        gotoxy(2, 6);
-        printf("│                             ✅ le dépôt a été effectué                   │");
-        gotoxy(2, 7);
-        printf("└────────────────────────────────────────────────────────────────────────────┘");
-        getch(); 
-    } else {
-        system("cls"); 
-        gotoxy(2, 5);
-        printf("┌────────────────────────────────────────────────────────────────────────────┐");
-        gotoxy(2, 6);
-        printf("│                             ⚠️ Problème système                         │");
-        gotoxy(2, 7);
-        printf("└────────────────────────────────────────────────────────────────────────────┘");
-        getch(); 
-    }
+    printf("✅ Deposit successful. New balance: %d\n", solde);
 }
+ void retrait() {
+    int idEntrer, montantRetirer, solde;
+
+    printf("Enter Account ID: ");
+    scanf("%d", &idEntrer);
+
+    if (verification(idEntrer) == 0) {
+        printf("Account not found.\n");
+        return;
+    }
+
+    printf("Enter Amount to Withdraw: ");
+    scanf("%d", &montantRetirer);
+
+    if (montantRetirer <= 0) {
+        printf("Error: Withdrawal amount must be positive.\n");
+        return;
+    }
+
+    solde = calculer_solde(idEntrer, -montantRetirer, 1);
+    if (solde == -1) {
+        printf("Error: Insufficient balance or account not found.\n");
+        return;
+    }
+
+    if (!modifierSolde(idEntrer, solde)) {
+        printf("Error updating the account file.\n");
+        return;
+    }
+
+    // Record in history
+    FILE *fichier_historique = fopen("historique.txt", "a+");
+    if (!fichier_historique) {
+        printf("Error opening history file.\n");
+        return;
+    }
+
+    time_t current_time = time(NULL);
+    struct tm *local_time = localtime(&current_time);
+
+    fprintf(fichier_historique, "%-12d | %-11s | %-12d | %02d/%02d/%04d | %d\n",
+            retourner_idhistori(idEntrer), "withdraw", montantRetirer,
+            local_time->tm_mday, local_time->tm_mon + 1, local_time->tm_year + 1900, solde);
+    fclose(fichier_historique);
+
+    printf("✅ Withdrawal successful. New balance: %d\n", solde);
+}
+
+
+
 int main() {
     setlocale(LC_ALL, "fr_FR.UTF-8");  
     SetConsoleOutputCP(65001);
