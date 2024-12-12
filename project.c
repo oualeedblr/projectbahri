@@ -38,6 +38,26 @@ typedef struct {
     compte c;
     char lieudenaissa[20];
 } client;
+/*****************************************************creation de fichier bin************************************ */
+void create_files() {
+    // Check if the "data" directory exists
+    if (access("data", F_OK) == -1) {
+        printf("Le dossier 'data' n'existe pas. Creation du dossier...\n");
+        if (mkdir("data") == -1) {
+            perror("Erreur lors de la creation du dossier 'data'");
+            exit(1); // Exit the program if the directory cannot be created
+        }
+    }
+
+    // Create clients.bin if it does not exist
+    FILE *clients_file = fopen("data/clients.bin", "ab");
+    if (clients_file == NULL) {
+        perror("Erreur lors de la creation du fichier clients.bin");
+        exit(1); // Exit the program if the file cannot be created
+    }
+    fclose(clients_file);
+    printf("Fichiers crees avec succes.\n");
+}
 /*************************************************fonctions****************************************************** */
 void clear_screen() {
     system("cls");
@@ -70,29 +90,54 @@ void obtenir_date_actuelle(date *d) {
     d->anne = tm.tm_year + 1900; // Les années commencent à 1900
 }
 /***********************************************masque le mdp ***************************************************** */
-void saisie_masquee(char* buffer, int taille_max) {
-    char c;
-    int index = 0;
+void saisirMotDePasseMasque(int *passwordadmin) {
+    char ch;
+    int i = 0;
+    *passwordadmin = 0;  // Reset the password to 0
 
-    while ((c = getch()) != '\r') { 
-        if (c == '\b') { 
-            if (index > 0) {
-                index--; 
-                printf("\b \b"); 
+    while (1) {
+        ch = _getch();  // Get a character from user input without echoing
+
+        if (ch == 13) {  // Enter key
+            break;
+        } else if (ch == 8) {  // Backspace key
+            if (i > 0) {
+                i--;
+                *passwordadmin /= 10;  // Remove the last digit
+                printf("\b \b");  // Erase last character (asterisk)
             }
-        } else if (index < taille_max - 1) {
-            buffer[index++] = c;
-            printf("*"); // Afficher une étoile
+        } else if (ch >= '0' && ch <= '9') {  // If the character is a digit
+            *passwordadmin = *passwordadmin * 10 + (ch - '0');  // Add digit to password
+            i++;
+            printf("*");  // Mask the character by printing an asterisk
         }
     }
-    buffer[index] = '\0'; // Terminer la chaîne
-}
 
+    printf("\n");  // Newline after input is finished
+}
+void hideCursor() {
+    HANDLE consoleHandle = GetStdHandle(STD_OUTPUT_HANDLE);
+    CONSOLE_CURSOR_INFO cursorInfo;
+    GetConsoleCursorInfo(consoleHandle, &cursorInfo);
+    cursorInfo.bVisible = 0; // Set to 0 to hide
+    SetConsoleCursorInfo(consoleHandle, &cursorInfo);
+}
+void progressBar() {
+    printf("\033[1;36m"); // Cyan text
+    movingBanner("Welcome to the Dynamic Terminal!");
+    printf("\033[0m");
+    for (int i = 0; i < 50; i++) {
+        printf("#");
+        fflush(stdout);
+        usleep(50000); // 50ms delay
+    }
+    printf("] Done!\n");
+}
 /***********************************************function de box ************************************************************ */
 void print_box(int x, int y, int width, int height) {
     gotoxy(x, y);
     for (int i = 0; i < width; i++) {
-        printf("▓");
+        printf("█");
     }
 
     for (int i = 1; i < height - 1; i++) {
@@ -105,37 +150,39 @@ void print_box(int x, int y, int width, int height) {
     }
     gotoxy(x, y + height - 1);
     for (int i = 0; i < width; i++) {
-        printf("▓");
+        printf("█");
     }
+
+
     printf("\n");
 }
 void print_box_with_title(int x, int y, int width, int height, const char *title) {
     int title_length = strlen(title);
     int padding = (width - title_length) / 2;
-    printf("\033[1;32m");  
+    printf("\033[0;34;40m"); 
     gotoxy(x, y);
     for (int i = 0; i < padding; i++) {
-        printf("▓");
+        printf("█");
     }
     printf("%s", title);
     for (int i = padding + title_length; i < width; i++) {
-        printf("▓");
+        printf("█");
     }
 
     // Middle part of the box
     for (int i = 1; i < height - 1; i++) {
         gotoxy(x, y + i);
-        printf("▓");
+        printf("█");
         for (int j = 1; j < width - 1; j++) {
             printf(" ");
         }
-        printf("▓");
+        printf("█");
     }
 
     // Bottom border
     gotoxy(x, y + height - 1);
     for (int i = 0; i < width; i++) {
-        printf("▓");
+        printf("█");
     }
     printf("\n");
     printf("\033[0m");
@@ -199,55 +246,83 @@ void NOTIFICATION(char *std, int trv) {
     }
 }
 /********************************************la premier intrface ********************************************** */
-void interface1(){
-    system("color 0A");
-    
-    // Affichage de la bordure et du texte avec gotoxy pour ajuster la position du curseur
+void interface1() {
+    // Define color codes
+    #define RESET   "\033[0m"
+    #define BORDER  "\033[44m\033[37m" // Blue background, white text
+    #define TITLE   "\033[1;37m"       // Bold white text
+    #define SUBTEXT "\033[1;36m"       // Bold cyan text
+    #define DESC    "\033[37m"         // White text
+    #define WELCOME "\033[1;33m"       // Bold yellow text
+    #define BYELLOW "\033[1;33m"       // Bold yellow text
+
+    system("color 01"); // Set console color to blue on black
+    system("cls"); // Clear the screen
+
+    // Top thicker border
+    gotoxy(3, 8);
+    printf("%s%s%s\n", BORDER, "██████████████████████████████████████████████████████████████████████", RESET);
+
+    // Inner top border
     gotoxy(4, 9);
-    printf("\t\t");  // Positionnement du curseur à (colonne 1, ligne 9)
-    printf("┌────────────────────────────────────────────────────────────────────────────┐");
+    printf("%s╔═════════════════════════════════════════════════════════════════════════════╗%s\n", BORDER, RESET);
 
-    gotoxy(4, 10); printf("\t\t");  // Positionnement du curseur à (colonne 1, ligne 10)
-    printf("│          D  I  G  I  T  A  L           C  A  P  I  T  A  L                 │");
+    // Title
+    gotoxy(10, 10);
+    printf("%s                  DIGITAL CAPITAL BANK                                       %s\n", TITLE, RESET);
 
-    gotoxy(4, 11);printf("\t\t");  // Positionnement du curseur à (colonne 1, ligne 11)
-    printf("│                             B  A  N  K                                     │");
+    // Subheader
+    gotoxy(15, 11);
+    printf("%s                            INFORMATIQUES ET SERVICES                         %s\n", SUBTEXT, RESET);
 
-    gotoxy(4, 12);printf("\t\t");  // Positionnement du curseur à (colonne 1, ligne 12)
-    printf("│                                                                            │");
+    // Inner empty line
+    gotoxy(4, 12);
+    printf("%s║                                                                             ║%s\n", BORDER, RESET);
 
-    gotoxy(4, 13);printf("\t\t");  // Positionnement du curseur à (colonne 1, ligne 13)
-    printf("│                       INFORMATIQUES ET SERVICES                            │");
+    // Description lines
+    gotoxy(6, 13);
+    printf("%s Digital Capital Bank (DCB) is a financial institution offering a range      %s\n", DESC, RESET);
+    gotoxy(6, 14);
+    printf("%s of services such as deposit management, credit issuance, payment handling,  %s\n", DESC, RESET);
+    gotoxy(6, 15);
+    printf("%s and investment of funds...                                                  %s\n", DESC, RESET);
 
-    gotoxy(4, 14);printf("\t\t");  // Positionnement du curseur à (colonne 1, ligne 14)
-    printf("│                                                                            │");
+    // Inner bottom border
+    gotoxy(4, 16);
+    printf("%s╚═════════════════════════════════════════════════════════════════════════════╝%s\n", BORDER, RESET);
 
-    gotoxy(4, 15);printf("\t\t");  // Positionnement du curseur à (colonne 1, ligne 15)
-    printf("│ Digital Capital Bank (DCB) Une banque est une institution financière qui   │");
+    // Bottom thicker border
+    gotoxy(3, 17);
+    printf("%s%s%s\n", BORDER, "██████████████████████████████████████████████████████████████████████", RESET);
 
-    gotoxy(4, 16);printf("\t\t");  // Positionnement du curseur à (colonne 1, ligne 16)
-    printf("│ offre des services tels que la gestion des dépôts, l'octroi de crédits,    │");
+    // Welcome message with star border in yellow
+    gotoxy(5, 19);
+    printf("%s****************************************************************************************%s\n", BYELLOW, RESET);
+    gotoxy(5, 20);
+    printf("%s*                             **S O Y E Z  L A  B I E N V E N U E**                      *%s\n", BYELLOW, RESET);
+    gotoxy(5, 21);
+    printf("%s****************************************************************************************%s\n", BYELLOW, RESET);
 
-    gotoxy(4, 17);printf("\t\t");  // Positionnement du curseur à (colonne 1, ligne 17)
-    printf("│ la gestion des paiements et l'investissement des fonds...                  │");
+    // Prompt
+    gotoxy(15, 23);
+    printf("%sPress Enter for more information:%s", WELCOME, RESET);
 
-    gotoxy(4, 18);printf("\t\t");  // Positionnement du curseur à (colonne 1, ligne 18)
-    printf("└────────────────────────────────────────────────────────────────────────────┘");
-
-
-    printf("\n") ; 
-    printf("\n") ; 
-    printf("\n") ; 
-    printf("****************************************************************************************************************\n");
-    printf("                                     **S O Y E Z  L A  B I E N V E N U E**\n ");
-    printf("****************************************************************************************************************\n\n\n\n\n");
-    printf("                                   pour plus d'information cliquez sur entrer :");
+    // Wait for user input
     getch();
-    printf("\n") ; 
-    tim_function() ; 
 }
+
 /*******************************************function de ecriture dans les fichiers ******************************** */
-void ECRIRELESCLIENTS(FILE *fich, client cl) {
+void ECRIRELESCLIENTSbin(FILE *fich, client cl) {
+    fich = fopen("data/clients.bin", "ab");
+    if (fich == NULL) {
+        perror("Error opening clients.bin for writing");
+        exit(1);
+    }
+
+    fwrite(&cl, sizeof(client), 1, fich);
+    fclose(fich);
+}
+void ECRIRELESCLIENTStxt(FILE *fich, client cl) {
     fich = fopen("clients.txt", "a+");
     if (fich == NULL) {
         perror("Error opening file for writing");
@@ -288,7 +363,7 @@ void ECRIRELESHISTORIQUE(FILE *fich,compte c) {
 
     fclose(fich); 
 }
-void ECRIRELESHISTORIQUE_depot(int idhisto,int montant,int solde ) {
+void ECRIRELESHISTORIQUE_retrait(int idhisto,int montant,int solde ) {
     FILE* fich = fopen("historique.txt", "a+");
     time_t current_time = time(NULL);
     struct tm *local_time = localtime(&current_time);
@@ -303,7 +378,27 @@ c.h.doperation.jour=local_time->tm_mday;
 c.h.doperation.mois=local_time->tm_mon+1;
 c.h.doperation.anne=local_time->tm_year + 1900;
 c.solde=solde;
-   fprintf(fich, "%-12d |        %-11s      | -%-11d |    %02d/%02d/%04d    | %d \n",
+   fprintf(fich, "%-12d |        %-11s      | %-12d |    %02d/%02d/%04d    | %d \n",
+            idhisto,c.h.typeoperation,c.h.montant,c.h.doperation.jour,c.h.doperation.mois,c.h.doperation.anne,c.solde);    
+
+    fclose(fich); 
+}
+void ECRIRELESHISTORIQUE_depot(int idhisto,int montant,int solde ) {
+    FILE* fich = fopen("historique.txt", "a+");
+    time_t current_time = time(NULL);
+    struct tm *local_time = localtime(&current_time);
+    if (fich == NULL) {
+        perror("Error opening file for writing");
+        exit(1);
+    }
+    compte c;  
+c.h.typeoperation="depot";
+c.h.montant=montant;
+c.h.doperation.jour=local_time->tm_mday;
+c.h.doperation.mois=local_time->tm_mon+1;
+c.h.doperation.anne=local_time->tm_year + 1900;
+c.solde=solde;
+   fprintf(fich, "%-12d |        %-11s      | %-12d |    %02d/%02d/%04d    | %d \n",
             idhisto,c.h.typeoperation,c.h.montant,c.h.doperation.jour,c.h.doperation.mois,c.h.doperation.anne,c.solde);    
 
     fclose(fich); 
@@ -355,27 +450,24 @@ void login() {
     int idCompt_search, password_search;
     FILE* fich;
     print_box_with_title(10,5,100,20,"*******LOGIN*******");
-    printf("\033[1;32m");
-    gotoxy(35,11);
-    printf("Donner le numero de compte (5 chiffres) : ");
-    gotoxy(35,15);
-    printf("Donner le mot de passe  (4 chiffres) : ");
-    gotoxy(10, 25);
-    tim_function();
+    printf("\033[0;34;40m");
+    gotoxy(35,11);printf("Donner le numero de compte (5 chiffres) : ");
+    gotoxy(35,15);printf("Donner le mot de passe  (4 chiffres) : ");
+    gotoxy(10, 25);tim_function();
 
     // Saisie des informations de connexion
     gotoxy(35 + strlen("Donner le numero de compte (5 chiffres) : "),11);  // Placer le curseur juste apres Donner le numero de compte (5 chiffres) :
     scanf("%d", &idCompt_search);
 
     gotoxy(35 + strlen("Donner le mot de passe (4 chiffres) : "), 15);  // Placer le curseur juste apres Donner le mot de passe (4 chiffres) : 
-    scanf("%d",&password_search);
+    saisirMotDePasseMasque(&password_search);
+    //scanf("%d",&password_search);
 
     // Authentification
     int trouver = authentification(idCompt_search, password_search);
     
     if (trouver == 1) {
         // Connexion réussie
-        
         NOTIFICATION("✅ CONNEXION RÉUSSIE",0);
         getch();
         PAGEPROFIL(fich,idCompt_search);
@@ -384,18 +476,14 @@ void login() {
         int choix = 0;
         system("cls");        
         NOTIFICATION("❌Erreur système ❌",0);
-
         getch();
         system("cls");
         NOTIFICATION("⚠️ Numéro de compte ou mot de passe incorrect ⚠️",0);
         print_box(10,5,100,20);
-        gotoxy(35,11);
-        printf("1-connexion .");
-        gotoxy(35,13);
-        printf("2-retourner  au menu ");
+        gotoxy(35,11);printf("1-connexion .");
+        gotoxy(35,15);printf("2-retourner  au menu ");
         gotoxy(36+strlen("2-retourner  au menu "), 8);
         scanf("%d", &choix);
-
         switch (choix) {
             case 1:
                 system("cls");
@@ -447,7 +535,7 @@ do
     printf("Donner votre numero de compte : \t");
     scanf("%d", &N_compte_saisie);
     printf("Donner le mot de passe actuel : \t");
-    scanf("%d", &mdp_actuel_saisie);
+    saisirMotDePasseMasque(&mdp_actuel_saisie);
     } while (authentification(N_compte_saisie,mdp_actuel_saisie)==0);
     return authentification(N_compte_saisie,mdp_actuel_saisie);
 }
@@ -470,10 +558,6 @@ int verification(int numcompte) {
         break; 
         }
     }
-
-    if (!trv) {
-        printf("Compte avec le numéro %d non trouvé.\n", numcompte);
-    }
     fclose(fich);
 }
 int SIGNIN(FILE* fich) {
@@ -485,12 +569,15 @@ int SIGNIN(FILE* fich) {
     c1.idclient = lastId + 1;
     time_t current_time = time(NULL);
     struct tm *local_time = localtime(&current_time);
+        int currentDay = local_time->tm_mday;
+        int currentMonth = local_time->tm_mon + 1;
+    int currentYear = local_time->tm_year + 1900;
 
     int x = 10, y = 5;
 
     do {
         print_box_with_title(x,y,100,20," CREATION DE COMPTE ");
-        printf("\033[1;32m");  
+printf("\033[0;34;40m");
          x+=2;y+=2;
         gotoxy(x, y++);
         printf(" ⚠️ ATTENTION ⚠️: VOUS ÊTES RESPONSABLE DE CHAQUE ERREUR DANS VOS INFORMATIONS.\n");
@@ -505,30 +592,60 @@ int SIGNIN(FILE* fich) {
         fgets(c1.prenom, sizeof(c1.prenom), stdin);
         remove_newline(c1.prenom);
        
+       
+ do {
         gotoxy(x, y++);
         printf(" Donner votre sexe ( Homme:H / Femme:F): \t");
-        scanf("%c",&c1.sexe);
-        while(getchar() != '\n');
-        do {
-            gotoxy(x, y++);
-            printf("Donner votre date de naissance (JJ MM AAAA): ");
-            scanf("%d %d %d", &c1.d.jour, &c1.d.mois, &c1.d.anne);
-            while (getchar() != '\n'); 
+        scanf(" %c", &c1.sexe); 
+        if (c1.sexe != 'H' && c1.sexe != 'h' && c1.sexe != 'F' && c1.sexe != 'f') {
+            gotoxy(x,y++);
+            printf("Entrée invalide. Veuillez entrer 'H' pour Homme ou 'F' pour Femme: \t");
+        }
+    } while (c1.sexe != 'H' && c1.sexe != 'h' && c1.sexe != 'F' && c1.sexe != 'f'); 
 
-            if (c1.d.jour > 31 || c1.d.mois > 12 || c1.d.anne < 1900 || c1.d.anne > 9999) {
-                gotoxy(x,y++);
-                printf("Date incorrecte ! Veuillez entrer une date valide.\n");
-            }
-        } while (c1.d.jour > 31 || c1.d.mois > 12 || c1.d.anne < 1900 || c1.d.anne > 9999);
+        while(getchar() != '\n');
+
+
+    do {
+        gotoxy(x, y++);
+        printf("Donner votre date de naissance (JJ MM AAAA): ");
+        scanf("%d %d %d", &c1.d.jour, &c1.d.mois, &c1.d.anne);
+        while (getchar() != '\n');
+
+        if (c1.d.mois < 1 || c1.d.mois > 12 || c1.d.jour < 1 || (c1.d.mois == 1 || c1.d.mois == 3 || c1.d.mois == 5 || c1.d.mois == 7 || c1.d.mois == 8 || c1.d.mois == 10 || c1.d.mois == 12) && c1.d.jour > 31 || (c1.d.mois == 4 || c1.d.mois == 6 || c1.d.mois == 9 || c1.d.mois == 11) && c1.d.jour > 30 || (c1.d.mois == 2 && (c1.d.anne % 4 == 0 && (c1.d.anne % 100 != 0 || c1.d.anne % 400 == 0)) && c1.d.jour > 29) || (c1.d.mois == 2 && c1.d.jour > 28) || c1.d.anne < 1900 || c1.d.anne > 9999) {
+            gotoxy(x, y++);
+            printf("Date incorrecte ! Veuillez entrer une date valide.\n");
+        }
+    } while (c1.d.mois < 1 || c1.d.mois > 12 || c1.d.jour < 1 || (c1.d.mois == 1 || c1.d.mois == 3 || c1.d.mois == 5 || c1.d.mois == 7 || c1.d.mois == 8 || c1.d.mois == 10 || c1.d.mois == 12) && c1.d.jour > 31 || (c1.d.mois == 4 || c1.d.mois == 6 || c1.d.mois == 9 || c1.d.mois == 11) && c1.d.jour > 30 || (c1.d.mois == 2 && (c1.d.anne % 4 == 0 && (c1.d.anne % 100 != 0 || c1.d.anne % 400 == 0)) && c1.d.jour > 29) || (c1.d.mois == 2 && c1.d.jour > 28) || c1.d.anne < 1900 || c1.d.anne > 9999);
+
+    int age = currentYear - c1.d.anne;
+    if (currentMonth < c1.d.mois || (currentMonth == c1.d.mois && currentDay < c1.d.jour)) {
+        age--;
+    }
+
+    if (age < 18) {
+        gotoxy(x, y++);
+        printf("Vous devez avoir 18 ans ou plus.\n");
+    } else {
+        gotoxy(x, y++);
+        printf("Vous avez %d ans.\n", age);
+    }
 
         gotoxy(x, y++);
         printf("Donner votre lieu de naissance :\t");
         fgets(c1.lieudenaissa, sizeof(c1.lieudenaissa), stdin);
         remove_newline(c1.lieudenaissa);
-        gotoxy(x,y++);
-        printf("Donner le type de compte (professionel/individuel): \t");
-        fgets(c.typecompte, sizeof(c.typecompte), stdin);
-        remove_newline(c.typecompte);
+      do {
+    gotoxy(x, y++);
+    printf("Donner le type de compte (professionel(P)/individuel(I)): \t");
+    fgets(c.typecompte, sizeof(c.typecompte), stdin);
+    remove_newline(c.typecompte);  // Remove the newline character if it exists
+
+    if (c.typecompte[0] != 'P' && c.typecompte[0] != 'I') {
+        gotoxy(x, y++);
+        printf("Entrée invalide. Veuillez entrer 'P' pour professionnel ou 'I' pour individuel.\n");
+    }
+    } while (c.typecompte[0] != 'P' && c.typecompte[0] != 'I');
         gotoxy(x, y++);
         printf("Donner votre numero de carte national (CIN): \t");
         fgets(c1.CIN, sizeof(c1.CIN), stdin);
@@ -550,9 +667,16 @@ int SIGNIN(FILE* fich) {
                 printf("Le numero est incorrect ! Il doit contenir exactement 9 chiffres.\n");
             }
         } while (strlen(c1.phone) != 9);
+       do {
         gotoxy(x, y++);
         printf("Entrer le dépôt initial: \t ");
-        scanf("%d",&c.h.montant);
+        scanf("%d", &c.h.montant);
+        if (c.h.montant <= 100) {
+        gotoxy(x, y++);
+        printf("Le montant doit être supérieur à 100. Veuillez entrer un montant valide: \t ");
+    }
+} while (c.h.montant <= 100);
+
         while (getchar() != '\n'); 
         gotoxy(x,y++ );
         printf("TU PEUX SAUVEGARDER VOTRE INFORMATIONS O/N :  \t");
@@ -563,7 +687,7 @@ int SIGNIN(FILE* fich) {
     } while (choix == 'N' || choix =='n');
     clear_box_content(10,5,100,20);
     int w=17,z=12;
-    printf("\033[1;32m"); 
+printf("\033[0;34;40m");
     gotoxy(w,z++ );
     do
     {
@@ -578,7 +702,7 @@ int SIGNIN(FILE* fich) {
     } while (verification(c1.c.Ncompte)==1);
     gotoxy(w,z++ );
     printf("TU peux donner le mot de passe (4 chiffres) : ");
-    scanf("%d", &c.password);
+    saisirMotDePasseMasque(&c.password);
     printf("\033[0m");
     
     system("cls");
@@ -592,7 +716,8 @@ int SIGNIN(FILE* fich) {
     c.h.doperation.anne=local_time->tm_year + 1900;
     c.h.idhistorique=getLastIdHistorique(fich);
     c.h.typeoperation="depot";
-    ECRIRELESCLIENTS(fich,c1);
+    ECRIRELESCLIENTSbin(fich,c1);
+    ECRIRELESCLIENTStxt(fich,c1);
     ECRIRELESCOMPTES(fich,c,c1);
     ECRIRELESHISTORIQUE(fich,c);
     NOTIFICATION(" ✅ Ton compte a ete enregistre avec succes. ✅ ",0);
@@ -633,6 +758,34 @@ void LIRECLIENTS(FILE *fich) {
 
     fclose(fich);
 }
+void AFFICHAGECLIENT() {
+    FILE *fich = fopen("data/clients.bin", "rb");
+    if (fich == NULL) {
+        perror("Error opening clients.bin for reading");
+        exit(1);
+    }
+
+    client cl;
+    int trv = 0;
+
+    while (fread(&cl, sizeof(client), 1, fich)) {
+       
+            printf("\033[0;34;40m");
+            gotoxy(22,8);
+            printf("Nom complet: %s %s\n", cl.nom, cl.prenom);        
+            gotoxy(22,14);
+            printf("La date de naissance : %02d/%02d/%04d  A %s \n", cl.d.jour, cl.d.mois, cl.d.anne,cl.lieudenaissa);
+            gotoxy(22,16);
+            printf("L'address: %s\n", cl.adress);
+            gotoxy(22,18);
+            printf("Phone: +212 %s\n", cl.phone);
+            printf("\033[0m");
+  
+    }
+
+    fclose(fich);
+
+}
 void function_verment() {
     int id_transfert, id_destinataire;
     float sold_verement;
@@ -641,7 +794,7 @@ void function_verment() {
     date date_verment;
     date date_Actuelle;
 
-    system("color 0A");
+    system("color 10");
     gotoxy(2, 2);
     printf("\t");
     printf("**********************\n");
@@ -808,7 +961,7 @@ void function_verment() {
     }
 }
 void afficher_compte(int numcompte) {
-    FILE *fich = fopen("temp.txt", "r");
+    FILE *fich = fopen("comptes.txt", "r");
     if (fich == NULL) {
         printf("Erreur d'ouverture du fichier.\n");
         return;
@@ -819,9 +972,8 @@ void afficher_compte(int numcompte) {
     while (fscanf(fich, "%d %s %s %d/%d/%d %s %d %d %d\n", &cl.c.Ncompte, cl.nom, cl.prenom, 
                   &cl.c.dcreation.jour, &cl.c.dcreation.mois, &cl.c.dcreation.anne, cl.c.typecompte, 
                   &cl.c.solde, &cl.c.password, &cl.c.h.idhistorique) != EOF) {
-        
         if (cl.c.Ncompte == numcompte) {
-            printf("\033[1;32m");
+            printf("\033[0;34;40m");
             gotoxy(22,8);
             printf("Compte : %d\n", cl.c.Ncompte);
             gotoxy(22,10);
@@ -845,140 +997,104 @@ void afficher_compte(int numcompte) {
     }
     fclose(fich);
 }
-void modifier_adress_client(FILE* fich, client cl, compte c) {
-    char nouvelle_adresse_saisie[100];  
+/********************************************************  */
+void modifier_adress_client(FILE* fich, client cl,int id_compte) {
+    char nouvelle_adresse_saisie[100];
     int N_compte_saisie;
-    int N_compte_cher;
     int trouve = 0;
 
-    printf("Donner la nouvelle adresse: \n");
-    scanf(" %[^\n]%*c", nouvelle_adresse_saisie);  
+    printf("Donner la nouvelle adresse : ");
+    scanf(" %[^\n]%*c", nouvelle_adresse_saisie);
 
-    printf("Donner votre numero de compte : \t");
-    scanf("%d", &N_compte_saisie);
-
-    fich = fopen("clients.txt", "r+");
+    fich = fopen("data/clients.bin", "rb+");
     if (fich == NULL) {
-        printf("Problème de lire le fichier\n");
+        perror("Erreur lors de l'ouverture du fichier clients.bin");
         exit(1);
     }
 
-    char ligne[200];
-    FILE* temp_fich=fopen("temp.txt","w+");
-     if ((temp_fich) == NULL) {
-        printf("Problème de ecrire dans  le fichier\n");
-        exit(1);
-    }
-    while (fgets(ligne, sizeof(ligne), fich) != NULL) {
-        if (sscanf(ligne, "%*d | %*[^|] | %*[^|] | %*[^|] | %*[^|] | %*[^|] | %*[^|] | %*[^|] |  %*[^|]  | %*[^|] | %d", &N_compte_cher) == 1) {
-            if (N_compte_cher == N_compte_saisie) {
-                trouve = 1;
-                sprintf(ligne, "%d | %s | %s | %d/%d/%d | %s | %s | %s | %s | %c | %s\n", 
-                        cl.idclient, cl.nom, cl.prenom, cl.d.jour, cl.d.mois, cl.d.anne, 
-                        cl.phone, cl.adress, cl.sexe, nouvelle_adresse_saisie);
-            }
+    while (fread(&cl, sizeof(client), 1, fich)) {
+        if (cl.c.Ncompte == id_compte) {
+            trouve = 1;
+            strcpy(cl.adress, nouvelle_adresse_saisie);
+            fseek(fich, -sizeof(client), SEEK_CUR); // Revenir en arrière pour remplacer
+            fwrite(&cl, sizeof(client), 1, fich);
+            break;
         }
-        fputs(ligne,temp_fich);
     }
 
     fclose(fich);
-    fclose(temp_fich);
-    remove("clients.txt");
-    rename("temp.txt", "clients.txt");
+
     if (!trouve) {
-        printf("Client non trouvé\n");
+        printf("Client non trouvé.\n");
     } else {
-        printf("Info du client modifiée avec succès\n");
+        NOTIFICATION("Adresse modifiée avec succès.",0);
+        getch();
     }
+    MODIFIERCLIENT(fich,cl,id_compte);
 }
-void modifier_client_telephone(FILE* fich, client cl, compte c) {
+void modifier_client_telephone(FILE* fich, client cl,int id_compte) {
     char nouvelle_telephone_saisie[20];
     int N_compte_saisie;
+    int trouve = 0;
 
-    printf("Donner le nouveau numéro de téléphone : \n");
+    printf("Donner le nouveau numéro de téléphone : ");
     scanf("%s", nouvelle_telephone_saisie);
 
-    printf("Pour la confirmation : \n");
-    printf("Donner votre numéro de compte : \t");
-    scanf("%d", &N_compte_saisie);
-
-    fich = fopen("clients.txt", "r");
+    fich = fopen("data/clients.bin", "rb+");
     if (fich == NULL) {
-        printf("Problème pour lire le fichier\n");
+        perror("Erreur lors de l'ouverture du fichier clients.bin");
         exit(1);
     }
 
-    FILE* temp_fich = fopen("tempcompte.txt", "w");
-    if (temp_fich == NULL) {
-        printf("Problème pour écrire dans le fichier temporaire\n");
-        fclose(fich);
-        exit(1);
-    }
-
-    char ligne[200];
-    int trouve = 0;
-    int N_compte_cher;
-
-    while (fgets(ligne, sizeof(ligne), fich) != NULL) {
-        // Parse le numéro de compte depuis la ligne
-        if (sscanf(ligne, "%*d | %*[^|] | %*[^|] | %*[^|] | %*[^|] | %*[^|] | %*[^|] | %*[^|] | %*[^|] | %d", &N_compte_cher) == 1) {
-            if (N_compte_cher == N_compte_saisie) {
-                // Remplacement des données pour ce client
-                trouve = 1;
-                fprintf(temp_fich, "%d | %s | %s | %d/%d/%d | %s | %s | %s | %s | %c | %s\n",
-                        cl.idclient, cl.nom, cl.prenom, cl.d.jour, cl.d.mois, cl.d.anne,
-                        nouvelle_telephone_saisie, cl.adress, cl.sexe, cl.phone);
-            } else {
-                fputs(ligne, temp_fich);
-            }
-        } else {
-            fputs(ligne, temp_fich);
+    while (fread(&cl, sizeof(client), 1, fich)) {
+        if (cl.c.Ncompte == id_compte) {
+            trouve = 1;
+            strcpy(cl.phone, nouvelle_telephone_saisie);
+            fseek(fich, -sizeof(client), SEEK_CUR); // Revenir en arrière pour remplacer
+            fwrite(&cl, sizeof(client), 1, fich);
+            break;
         }
     }
 
     fclose(fich);
-    fclose(temp_fich);
-
-    // Remplacer le fichier original par le fichier temporaire
-    remove("clients.txt");
-    rename("temp.txt", "clients.txt");
 
     if (!trouve) {
-        printf("Client non trouvé\n");
+        printf("Client non trouvé.\n");
     } else {
-        printf("Info du client modifiée avec succès\n");
+        NOTIFICATION("Téléphone modifié avec succès.",0);
+getch();
     }
+    MODIFIERCLIENT(fich,cl,id_compte);
 }
-
-void MODIFIERCLIENT(FILE* fich,client cl,compte c){
+void MODIFIERCLIENT(FILE* fich,client cl,int id_compte){
     fich = fopen("clients.txt", "r");
     if (fich == NULL) {
         perror("Error opening file for reading");
         exit(1);
     }
 int choix=0;
-LIRECLIENTS(fich);
+AFFICHAGECLIENT();
 do{
 
 printf("MODIFIER CLIENT\n");
 printf("1- modifier l'adresse .\n");
 printf("2- modifier le numero .\n");
-printf("3-modifier les deux .\n");
+printf("3-retourner  .\n");
 printf("donner votre choix : ");
 scanf("%d",&choix);
 switch (choix)
 {
 case 1:
-system("cls");
-    modifier_adress_client(fich,cl,c);
+    system("cls");
+    modifier_adress_client(fich,cl,id_compte);
     break;
 case 2 :
 system("cls");
-modifier_client_telephone(fich,cl,c);
+modifier_client_telephone(fich,cl,id_compte);
 break;
 case 3: 
 system("cls");
-modifier_info_client(fich,cl,c);
+PAGEPROFIL(fich,id_compte);
 break;
 default:
     break;
@@ -987,12 +1103,10 @@ default:
    
 fclose(fich);
 
-}/*** */
-void modifier_info_client(FILE* fich,client cl,compte c) {
-modifier_adress_client(fich,cl,c);
-modifier_client_telephone(fich,cl,c);
 }
-void CHANGER_MOTDEPASSE(numcompte) {
+//
+
+void CHANGER_MOTDEPASSE(int numcompte) {
     int nouveau_mdp_saisie;
     int trouve = 0;
     trouve=verification_mdp();
@@ -1000,51 +1114,84 @@ void CHANGER_MOTDEPASSE(numcompte) {
     printf("Donner le nouveau mot de passe (4 chiffres) : \t");
     scanf("%4d", &nouveau_mdp_saisie);
     }
-    FILE *fich = fopen("comptes.txt", "r+");
-    if (fich == NULL) {
-        printf("Erreur : impossible d'ouvrir le fichier.\n");
-        exit(0);
-    }
-
-    char ligne[256];
-    long position;
-    trouve = 0;
+     FILE *fichier = fopen("comptes.txt", "r+"); // Open file for reading and writing
     client cl;
-    compte c;
-    while (fgets(ligne, sizeof(ligne), fich)) {
-        // Extraire les informations depuis la ligne
-        if (sscanf(ligne, "%d %s %s %d/%d/%d %s %d %d %d", 
-                  &cl.c.Ncompte, cl.nom, cl.prenom, 
-                  &c.dcreation.jour, &c.dcreation.mois, &c.dcreation.anne, c.typecompte, 
-                  &c.solde, &c.password, &c.h.idhistorique) == 10) {
-            // Vérifier si c'est le bon numéro de compte
-            if (cl.c.Ncompte== numcompte) {
-                trouve = 1;
-                position = ftell(fich) - strlen(ligne);  
-                fseek(fich, position, SEEK_SET);  
-                fprintf(fich, "%d %s %s %02d/%02d/%04d %s %d %d %d\n", 
-                        cl.c.Ncompte, cl.nom, cl.prenom, c.dcreation.jour, c.dcreation.mois, c.dcreation.anne,c.typecompte,c.solde,nouveau_mdp_saisie,c.h.idhistorique);
-                break;
-            }
-        }
+    trouve = 0;
+
+    if (!fichier) {
+        perror("Erreur d'ouverture du fichier");
+        return 0; // Failure
     }
 
-    fclose(fich);
+    long position = 0; // To track the position in the file
+    char buffer[256]; // Buffer to store the new line
+
+    while (fscanf(fichier, "%d%s%s%d/%d/%d%s%d%d%d\n",
+                  &cl.c.Ncompte, cl.nom, cl.prenom,
+                  &cl.c.dcreation.jour, &cl.c.dcreation.mois, &cl.c.dcreation.anne,
+                  cl.c.typecompte, &cl.c.solde, &cl.c.password, &cl.c.h.idhistorique) != EOF) {
+        if (cl.c.Ncompte == numcompte) {
+            // Update password
+            cl.c.password= nouveau_mdp_saisie;
+            trouve = 1;
+
+            // Move file pointer back to overwrite the current line
+            fseek(fichier, position, SEEK_SET);
+
+            // Format the new record into a buffer
+            int newLength = snprintf(buffer, sizeof(buffer), "%d %s %s %d/%d/%d %s %d %d %d\n",
+                                      cl.c.Ncompte, cl.nom, cl.prenom,
+                                      cl.c.dcreation.jour, cl.c.dcreation.mois, cl.c.dcreation.anne,
+                                      cl.c.typecompte, cl.c.solde, cl.c.password, cl.c.h.idhistorique);
+
+            // Get the length of the original line
+            int oldLength = ftell(fichier) - position;
+
+            // Ensure the new line is exactly the same length as the old line
+            if (newLength < oldLength) {
+                memset(buffer + newLength, ' ', oldLength - newLength); // Pad with spaces
+                buffer[oldLength] = '\0'; // Null-terminate the padded line
+            }
+
+            // Write the new record
+            fprintf(fichier, "%s", buffer);
+
+            break; // Exit loop after finding and updating the account
+        }
+        // Update position to the start of the next record
+        position = ftell(fichier);
+    }
+
+
+    fclose(fichier);
     if (!trouve) {
         printf("Client non trouvé.\n");
     } else {
         printf("Mot de passe modifié avec succès.\n");
     }
-    sleep(5);
+    PAGEPROFIL(fichier,numcompte);
 }
 ///lsite des operation 
 void operation_liste(int numcompte){
     int choix = 0;
-    printf("1-le depot .\n");
-    printf("2-retrait .\n");
-    printf("3-vairement .\n");
-    scanf("%d",&choix);
-    switch (choix)
+    FILE*fich;
+        system("cls");
+    
+     do {
+        system("cls");
+        print_box_with_title(10, 5, 100, 20, "*****LES OPERATIONS*****");
+        printf("\033[0;34;40m");
+        gotoxy(35, 11); printf("1-le depot ..\n");
+        gotoxy(35, 13); printf("2-RETRAIT.\n");
+        gotoxy(35, 15); printf("3-VIREMENTS.\n");
+        gotoxy(35, 17); printf("4-QUITTER L'APPLICATION.\n");
+
+        gotoxy(35, 19); printf("Donner votre choix : \t");
+        gotoxy(10, 25);
+        tim_function();
+        gotoxy(35+strlen("Donner votre choix : "),19);
+        scanf("%d",&choix);
+      switch (choix)
     {
     case 1:
     system("cls");
@@ -1056,9 +1203,14 @@ void operation_liste(int numcompte){
     case 3 : 
         function_verment();
         break;
+       case 4 : 
+        PAGEPROFIL(fich,numcompte);
+        break;
     default:
         break;
     }
+        printf("\033[0m");
+    } while (choix != 3);      
 }
 /// fonction de page de profil 
 int PAGEPROFIL(FILE* fich,int id_compte){
@@ -1075,7 +1227,7 @@ int PAGEPROFIL(FILE* fich,int id_compte){
     
     gotoxy(35,11);
     afficher_compte(id_compte);
-    printf("\033[1;32m");
+    printf("\033[0;34;40m");
 
     gotoxy(60, 8);
     printf("1-FAIRE DES OPPERATIONS .\n");
@@ -1113,8 +1265,8 @@ int PAGEPROFIL(FILE* fich,int id_compte){
             
             break;
         case 3:
-         clear_screen();    
-            MODIFIERCLIENT(fich,cl,c);
+        clear_screen();    
+        MODIFIERCLIENT(fich,cl,id_compte);
            break;
         case 4:
            clear_screen();
@@ -1146,14 +1298,16 @@ void afficher_menu() {
      do {
         system("cls");
         print_box_with_title(10, 5, 100, 20, "ACCUEIL");
-        printf("\033[1;32m");
+        printf("\033[0;34;40m");
         gotoxy(35, 11); printf("1-SIGN IN.\n");
         gotoxy(35, 13); printf("2-LOGIN.\n");
-        gotoxy(35, 15); printf("3-QUITTER L'APPLICATION.\n");
-        gotoxy(35, 17); printf("Donner votre choix : \t");
+        gotoxy(35, 15); printf("3-ADMIN.\n");
+        gotoxy(35, 17); printf("4-QUITTER L'APPLICATION.\n");
+
+        gotoxy(35, 19); printf("Donner votre choix : \t");
         gotoxy(10, 25);
         tim_function();
-        gotoxy(35+strlen("Donner votre choix : "),17);
+        gotoxy(35+strlen("Donner votre choix : "),19);
         scanf("%d",&choix);
         switch (choix) {
             case 1:
@@ -1164,7 +1318,11 @@ void afficher_menu() {
                 system("cls");
                 login();
                 break;
-            case 3:
+                        case 3:
+                clear_screen();
+                LOGINADMIN();
+                break;
+            case 4:
                 clear_screen();
                 NOTIFICATION("MERCI POUR VOTRE VISITE .....", 1);
                 break;
@@ -1197,7 +1355,7 @@ void FermetCompt() {
     int id_search, password;
     int compt_trouver = 0;
 
-    system("color 0A");
+    system("color 01");
     printf("\n⚠️ Note bien que la suppression s'effectue définitivement !\n");
     printf("\nEntrer le numéro de votre compte : ");
     scanf("%d", &id_search);
@@ -1234,67 +1392,11 @@ void FermetCompt() {
         printf("\n❌ Erreur : Compte introuvable ou mot de passe incorrect ❌\n");
         Sleep(3);
     }
-}/*
-int modifierSolde(int numeroCompte, int nvsolde) {
-    FILE *fich = fopen("comptes.txt", "r");
-    if (fich == NULL) {
-        printf("Erreur : impossible d'ouvrir le fichier.\n");
-        return;
-    }
-
-    FILE *fichTemp = fopen("temp.txt", "w");
-    if (fichTemp == NULL) {
-        printf("Erreur : impossible de créer le fichier temporaire.\n");
-        fclose(fich);
-        return 0; 
-    }
-
-    char ligne[256];
-    int trouve = 0;
-    client cl;
-    compte c;
-
-    // Read each line from the original file
-    while (fgets(ligne, sizeof(ligne), fich)) {
-        // Extract data from the line
-        if (sscanf(ligne, "%d %s %s %d/%d/%d %s %d %d %d", 
-                  &cl.c.Ncompte, cl.nom, cl.prenom, 
-                  &c.dcreation.jour, &c.dcreation.mois, &c.dcreation.anne, c.typecompte, 
-                  &c.solde, &c.password, &c.h.idhistorique) == 10) {
-
-            // If account number matches, update the balance
-            if (cl.c.Ncompte == numeroCompte) {
-                c.solde = nvsolde;  // Set the new balance
-                trouve = 1;
-            }
-
-            // Write the updated data to the temporary file
-            fprintf(fichTemp, "%d %s %s %02d/%02d/%04d %s %d %d %d\n", 
-                    cl.c.Ncompte, cl.nom, cl.prenom, c.dcreation.jour, c.dcreation.mois, c.dcreation.anne, 
-                    c.typecompte, c.solde, c.password, c.h.idhistorique);
-        }
-    }
-
-    fclose(fich);
-    fclose(fichTemp);
-
-    // If an account was found and modified, replace the original file with the temporary file
-    if (trouve) {
-        remove("comptes.txt");  // Delete the original file
-        rename("temp.txt", "comptes.txt");  // Rename temp file to the original file
-        printf("Le solde a été mis à jour avec succès.\n");
-    } else {
-        remove("temp.txt");  // Delete the temp file if account not found
-        printf("Compte non trouvé.\n");
-    }
-    return trouve ; 
 }
-
-*/
 void Supresion_compt() {
     int choix;
 
-    system("color 0A");
+    system("color 01");
     printf("\n**** FERMETURE DE COMPTE ****\n");
     printf("1. Fermer un compte\n");
     printf("2. Retourner au menu principal\n");
@@ -1343,9 +1445,6 @@ int retourner_idhistori(int numcompte) {
     }
     fclose(fich);
 }
-
-
-
 // calculer le solde 
 int calculer_solde(int numcompte, int montant, int numop) {
     FILE *fich = fopen("comptes.txt", "r");
@@ -1372,47 +1471,65 @@ int calculer_solde(int numcompte, int montant, int numop) {
     return -1; // Indicate that the account was not found
 }
 int modifierSolde(int idCompte, int nouveauSolde) {
-    FILE *fichierLecture = fopen("comptes.txt", "r");
-    FILE *fichierTemp = fopen("temp.txt", "w");
+    FILE *fichier = fopen("comptes.txt", "r+"); // Open file for reading and writing
     client cl;
     int trouve = 0;
 
-    if (!fichierLecture || !fichierTemp) {
+    if (!fichier) {
         perror("Erreur d'ouverture du fichier");
         return 0; // Failure
     }
 
-    while (fscanf(fichierLecture, "%d%s%s%d/%d/%d%s%d%d%d\n",
+    long position = 0; // To track the position in the file
+    char buffer[256]; // Buffer to store the new line
+
+    while (fscanf(fichier, "%d%s%s%d/%d/%d%s%d%d%d\n",
                   &cl.c.Ncompte, cl.nom, cl.prenom,
                   &cl.c.dcreation.jour, &cl.c.dcreation.mois, &cl.c.dcreation.anne,
                   cl.c.typecompte, &cl.c.solde, &cl.c.password, &cl.c.h.idhistorique) != EOF) {
-
         if (cl.c.Ncompte == idCompte) {
+            // Update solde
             cl.c.solde = nouveauSolde;
-            trouve ++;
+            trouve = 1;
+
+            // Move file pointer back to overwrite the current line
+            fseek(fichier, position, SEEK_SET);
+
+            // Format the new record into a buffer
+            int newLength = snprintf(buffer, sizeof(buffer), "%d %s %s %d/%d/%d %s %d %d %d\n",
+                                      cl.c.Ncompte, cl.nom, cl.prenom,
+                                      cl.c.dcreation.jour, cl.c.dcreation.mois, cl.c.dcreation.anne,
+                                      cl.c.typecompte, cl.c.solde, cl.c.password, cl.c.h.idhistorique);
+
+            // Get the length of the original line
+            int oldLength = ftell(fichier) - position;
+
+            // Ensure the new line is exactly the same length as the old line
+            if (newLength < oldLength) {
+                memset(buffer + newLength, ' ', oldLength - newLength); // Pad with spaces
+                buffer[oldLength] = '\0'; // Null-terminate the padded line
+            }
+
+            // Write the new record
+            fprintf(fichier, "%s", buffer);
+
+            break; // Exit loop after finding and updating the account
         }
-        fprintf(fichierTemp, "%d %s %s %d/%d/%d %s %d %d %d\n",
-                cl.c.Ncompte, cl.nom, cl.prenom,
-                cl.c.dcreation.jour, cl.c.dcreation.mois, cl.c.dcreation.anne,
-                cl.c.typecompte, cl.c.solde, cl.c.password, cl.c.h.idhistorique);
+        // Update position to the start of the next record
+        position = ftell(fichier);
     }
 
-    fclose(fichierLecture);
-    fclose(fichierTemp);
+    fclose(fichier);
 
-if (trouve != 0) {
-    remove("comptes.txt")  ;
-    rename("temp.txt", "comptes.txt") ;
-    printf("Mise à jour réussie.\n");
-    getch();
-    return 1; // Success
-} else {
-    remove("temp.txt");
-    printf("Compte non trouvé.\n");
-    getch();
-    return 0; // Account not found
+    if (trouve) {
+        printf("Mise à jour réussie.\n");
+        return 1; // Success
+    } else {
+        printf("Compte non trouvé.\n");
+        return 0; // Account not found
+    }
 }
-}
+
 void depot() {
     int idEntrer, soldEAjouter, solde;
 
@@ -1479,7 +1596,7 @@ void depot() {
         return;
     }
 
-    solde = calculer_solde(idEntrer, -montantRetirer, 1);
+    solde = calculer_solde(idEntrer, montantRetirer, 1);
     if (solde == -1) {
         printf("Error: Insufficient balance or account not found.\n");
         return;
@@ -1509,10 +1626,355 @@ void depot() {
 }
 
 
+/******* AUTONTIFICATION ADMIN *********/
+int authentificationAdmin( int pswd_saisie) {
+    FILE *fich;
+    int password_Admin ; 
+    int variable_trouver = 0 ; 
+    fich = fopen("data/admin/Fadmin.txt" , "r"); 
+    if(fich == NULL){
+        printf("fichies contient une problemme d'ouverture "); 
+        exit(1); 
+    }
 
+    // comparer les element // ==> si le password trouver donc la fonction return 1 sinon return 0 . 
+    while (fscanf(fich , "%d\n" ,&password_Admin) ==1)
+    {
+        if(pswd_saisie == password_Admin){
+            variable_trouver ++ ; 
+        }
+    }
+    fclose(fich); 
+    
+    if(variable_trouver != 0){
+        return variable_trouver ; 
+    }
+    else{
+        return 0 ; 
+    }
+}
+void LOGINADMIN(){
+    int  passwordadmin;
+    FILE* fich;
+    print_box_with_title(10,5,100,20,"**LOGIN-ADMIIN**");
+    printf("\033[0;34;40m");
+    gotoxy(35,15);
+    printf("Donner le mot de passe  (4 chiffres) : ");
+    gotoxy(10, 25);
+    tim_function();
+
+    gotoxy(35 + strlen("Donner le mot de passe (4 chiffres) : "), 15);  // Placer le curseur juste apres Donner le mot de passe (4 chiffres) : 
+    saisirMotDePasseMasque(&passwordadmin);  
+
+    // Authentification
+    // autofication pour fihcies admin : 
+    int trouver =authentificationAdmin(passwordadmin); 
+    
+    if (trouver != 0 ) {
+        // Connexion réussie
+        
+        NOTIFICATION("✅ CONNEXION RÉUSSIE",0);
+        getch();
+        // fonction menu admin pour les operation admin . 
+        MENUE_ADMIN(); 
+    } else {
+        // Connexion échouée
+        int choix = 0;
+        system("cls");        
+        NOTIFICATION("❌Erreur système ❌",0);
+
+        getch();
+        system("cls");
+        NOTIFICATION("⚠️ Numéro de compte ou mot de passe incorrect ⚠️",0);
+        print_box(10,5,100,20);
+        gotoxy(35,11);
+        printf("1-connexion .");
+        gotoxy(35,13);
+        printf("2-retourner  au menu ");
+        gotoxy(36+strlen("2-retourner  au menu "), 8);
+        scanf("%d", &choix);
+
+        switch (choix) {
+            case 1:
+                system("cls");
+                LOGINADMIN(); 
+                break; 
+            case 2:
+                system("cls");
+                afficher_menu(); // Retourner au menu
+                break;
+            default:
+                system("cls");
+                exit(0); 
+                break;
+        }
+    }
+    printf("\033[0m"); 
+}
+void MENUE_ADMIN(){
+
+    int choix = 0 ; 
+
+    print_box_with_title(10,5,100,20,"**MENUE_ADMIN**");
+   printf("\033[0;34;40m");
+    gotoxy(35,11);
+    printf("1-affichage de compte  ");
+    gotoxy(35,15);
+    printf("2-affichage de client ");
+    gotoxy(35 , 17); 
+    printf("3-affichage historique .  "); // choix pour entrer :
+    gotoxy(35 , 19); 
+    printf("4_Activite Et transaction : "); 
+    gotoxy(35 , 21); 
+    printf("Choix : "); 
+    gotoxy(10, 25);
+    tim_function();
+
+    // Saisie des informations de connexion
+    gotoxy(45,21); 
+    scanf("%d",&choix); 
+    getch(); 
+
+    // switch : 
+    switch (choix)
+    {
+    case 1 : 
+        system("cls"); 
+        // fonction AFichage information sur compt compt  . 
+        AFichageCOMPt(); 
+
+        break;
+    case 2 : 
+        system("cls"); 
+        // Afichage client :  
+        AFICHaclient(); 
+        break; 
+    case 3: 
+        system("cls"); 
+        // afichage historique : 
+        break; 
+     case 4 : 
+        system("cls"); 
+        // fonction activite : 
+        break; 
+    default:
+        // retour au page initiale . 
+        exit(1) ; // exite aplication . 
+        break;
+    }
+}
+void AFichageCOMPt() {
+    FILE *fich;
+    client cl; // Une variable pour stocker les informations de chaque compte
+
+    // Ouvrir le fichier en mode lecture
+    fich = fopen("comptes.txt", "r");
+    if (fich == NULL) {
+        printf("Erreur d'ouverture du fichier Comp.text\n");
+        exit(1); // Arrêter l'exécution en cas d'erreur
+    }
+
+    // backgroud d'afichage est en blan 
+    system("color 01"); 
+
+    // Titre de l'affichage
+    printf("\n");
+    printf("┌────────────────────────────────────────────────────────────────────────┐\n");
+    printf("│                        Liste des Comptes                               │\n");
+    printf("└────────────────────────────────────────────────────────────────────────┘\n");
+    printf("\n");
+
+    // Affichage de l'entête
+    printf("ID Compte   | Type Compte    | Solde      | Mot de Passe | ID Historique | DATE DE CREATION\n");
+    printf("-----------------------------------------------------------------------------------------\n");
+
+
+    // Lecture et affichage des données de chaque compte
+      while (fscanf(fich, "%d %s %s %d/%d/%d %s %d %d %d\n", &cl.c.Ncompte, cl.nom, cl.prenom, 
+                  &cl.c.dcreation.jour, &cl.c.dcreation.mois, &cl.c.dcreation.anne, cl.c.typecompte,
+                  &cl.c.solde, &cl.c.password, &cl.c.h.idhistorique) != EOF) { // ID historique associé au compte
+    
+        // Affichage des informations du compte avec une mise en forme verticale
+        printf("%-12d| %-13s | %-8d | %-12d | %-15d | %d/%d/%d\n",cl.c.Ncompte,cl.c.typecompte,cl.c.solde,cl.c.password, cl.c.h.idhistorique,cl.c.dcreation.jour, cl.c.dcreation.mois, cl.c.dcreation.anne);
+    }
+
+    // Fermer le fichier
+    fclose(fich);
+    getchar();
+    MENUE_ADMIN();
+}
+void AFICHaclient(){
+    FILE *fich ; 
+    client c ; 
+    // afichage des information du client : 
+    fich = fopen("data/clients.bin","r"); 
+    if(fich == NULL){
+        printf("problemme dans le fichies "); 
+        exit(1); 
+    }
+    
+    system("color 01");
+    while (fscanf(fich, "%d %s %s %s %c %s %s %s %d-%d-%d", 
+                &c.idclient, c.CIN, c.nom, c.prenom, &c.sexe, c.adress, c.phone, c.lieudenaissa, 
+                &c.d.jour, &c.d.mois, &c.d.anne) == 11) {
+        
+        printf("\n");
+        printf("┌────────────────────────────────────────────────────────────────────────┐\n");
+        printf("│                         Détails du Client                              │\n");
+        printf("└────────────────────────────────────────────────────────────────────────┘\n");
+        printf("\n");
+
+        // Affichage des informations du client avec mise en forme
+        printf("ID Client        : %-20d\n", c.idclient);
+        printf("CIN              : %-20s\n", c.CIN);
+        printf("Nom              : %-20s\n", c.nom);
+        printf("Prénom           : %-20s\n", c.prenom);
+        printf("Sexe             : %-20c\n", c.sexe);
+        printf("Adresse          : %-20s\n", c.adress);
+        printf("Téléphone        : %-20s\n", c.phone);
+        printf("Lieu de Naissance: %-20s\n", c.lieudenaissa);
+        printf("Date de Naissance: %02d-%02d-%04d\n", c.d.jour, c.d.mois, c.d.anne);
+        printf("\033[0m");
+    }
+    getchar();
+    MENUE_ADMIN();
+}
+void movingBanner(const char *text) {
+    if (!text) {
+        fprintf(stderr, "Invalid input to movingBanner.\n");
+        return;
+    }
+
+    int textLen = strlen(text);
+    if (textLen == 0) {
+        fprintf(stderr, "Text length must be greater than zero.\n");
+        return;
+    }
+
+    char display[81] = {0}; // Assume terminal width is 80 characters + null terminator
+
+    // Animate the text across the terminal width
+    for (int pos = 0; pos < textLen + 80; pos++) {
+        memset(display, ' ', 80); // Clear the display array with spaces
+
+        // Fill the display array dynamically based on position
+        for (int i = 0; i < 80; i++) {
+            int index = (pos + i) % textLen; // Circular indexing
+            display[i] = text[index]; // Use the original text
+        }
+
+        printf("\r\033[1;33m%s\033[0m", display); // Bright yellow text
+        fflush(stdout);
+        usleep(100000); // Delay for smooth animation
+    }
+
+    // Add a symbol at the end of the line
+    printf("\r\033[1;33m%s █\033[0m\n", display);
+}
+void drawLetterD(int x, int y) {
+    gotoxy(x, y);     printf("█████  ");
+    gotoxy(x, y + 1); printf("█    █ ");
+    gotoxy(x, y + 2); printf("█     █");
+    gotoxy(x, y + 3); printf("█    █ ");
+    gotoxy(x, y + 4); printf("█████  ");
+}
+
+void drawLetterI(int x, int y) {
+    gotoxy(x, y);     printf(" ███ ");
+    gotoxy(x, y + 1); printf("  █  ");
+    gotoxy(x, y + 2); printf("  █  ");
+    gotoxy(x, y + 3); printf("  █  ");
+    gotoxy(x, y + 4); printf(" ███ ");
+}
+
+void drawLetterG(int x, int y) {
+    gotoxy(x, y);     printf(" █████");
+    gotoxy(x, y + 1); printf("█     ");
+    gotoxy(x, y + 2); printf("█  ███");
+    gotoxy(x, y + 3); printf("█    █");
+    gotoxy(x, y + 4); printf(" █████");
+}
+
+void drawLetterT(int x, int y) {
+    gotoxy(x, y);     printf("███████");
+    gotoxy(x, y + 1); printf("   █   ");
+    gotoxy(x, y + 2); printf("   █   ");
+    gotoxy(x, y + 3); printf("   █   ");
+    gotoxy(x, y + 4); printf("   █   ");
+}
+
+void drawLetterA(int x, int y) {
+    gotoxy(x, y);     printf("   █   ");
+    gotoxy(x, y + 1); printf("  █ █  ");
+    gotoxy(x, y + 2); printf(" █   █ ");
+    gotoxy(x, y + 3); printf("███████");
+    gotoxy(x, y + 4); printf("█     █");
+}
+
+void drawLetterL(int x, int y) {
+    gotoxy(x, y);     printf("█      ");
+    gotoxy(x, y + 1); printf("█      ");
+    gotoxy(x, y + 2); printf("█      ");
+    gotoxy(x, y + 3); printf("█      ");
+    gotoxy(x, y + 4); printf("██████ ");
+}
+
+void drawLetterB(int x, int y) {
+    gotoxy(x, y);     printf("█████  ");
+    gotoxy(x, y + 1); printf("█    █ ");
+    gotoxy(x, y + 2); printf("█████  ");
+    gotoxy(x, y + 3); printf("█    █ ");
+    gotoxy(x, y + 4); printf("█████  ");
+}
+
+void drawLetterN(int x, int y) {
+    gotoxy(x, y);     printf("█    █ ");
+    gotoxy(x, y + 1); printf("██   █ ");
+    gotoxy(x, y + 2); printf("█ █  █ ");
+    gotoxy(x, y + 3); printf("█  █ █ ");
+    gotoxy(x, y + 4); printf("█   ██ ");
+}
+
+void drawLetterK(int x, int y) {
+    gotoxy(x, y);     printf("█   █ ");
+    gotoxy(x, y + 1); printf("█  █  ");
+    gotoxy(x, y + 2); printf("████  ");
+    gotoxy(x, y + 3); printf("█  █  ");
+    gotoxy(x, y + 4); printf("█   █ ");
+}
+
+void drawText() {
+    int x = 2, y = 2;
+
+    drawLetterD(x, y);
+    drawLetterI(x + 8, y);
+    drawLetterG(x + 14, y);
+    drawLetterI(x + 22, y);
+    drawLetterT(x + 28, y);
+    drawLetterA(x + 36, y);
+    drawLetterL(x + 44, y);
+
+    drawLetterB(x, y + 6);
+    drawLetterA(x + 8, y + 6);
+    drawLetterN(x + 16, y + 6);
+    drawLetterK(x + 24, y + 6);
+}
 int main() {
     setlocale(LC_ALL, "fr_FR.UTF-8");  
     SetConsoleOutputCP(65001);
-    system("COLOR 0A");
+    system("COLOR 01");
+    system("cls");
+   /*int data[] = {5, 10, 7, 12, 8};
+    displayBarGraph(data, 5);
+    progressBar();
+   */
+
+    hideCursor();
+    movingBanner("BANK DIGITAL ");
+    drawText();
+    sleep(5000);
+    interface1();
+    
+
     afficher_menu();    
 }
