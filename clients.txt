@@ -1,4 +1,4 @@
 ID_CLIENT  |      NOM   | PRENOM      | date_naiss  | lieu_naiss        | CIN      |            ADDRESS              |  PHONE         | SEXE | N COMPTE   
 --------------------------------------------------------------------------------------------------------------------------------------------------------
-100001     | lebhir     | walid       | 01/05/2005  | dadasda           | asdasda  | dadsadad                       | +212 658878777  |  H   | 11111 
-100002     | boulanouar | walid       | 16/09/2003  | casa              | bh556565 | derb lm9awden                  | +212 687878787  |  H   | 22222 
+100001     | abs        | saad        | 16/05/2004  | sfro              | bh565655 | sefro                          | +212 658888888  |  H   | 11111 
+100002     | akouradi   | achraf      | 05/02/2005  | midlet            | bh65655  | midelttt                       | +212 565656565  |  h   | 22222 
