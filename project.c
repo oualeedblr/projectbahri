@@ -38,6 +38,13 @@ typedef struct {
     compte c;
     char lieudenaissa[20];
 } client;
+typedef struct 
+{
+    char Nomentreprise[20] ; 
+    int Code_iDentifant ; 
+    char adresentreprise[20] ; 
+    char type_entreprise[20]; 
+}Entreprise ; 
 /*****************************************************creation de fichier bin************************************ */
 void create_files() {
     // Check if the "data" directory exists
@@ -65,6 +72,7 @@ void clear_screen() {
 void remove_newline(char *str) {
     str[strcspn(str, "\n")] = '\0';
 }
+
 /**********************************************function de deplacement ********************************************* */
 void gotoxy(int x, int y) {
     COORD c;
@@ -98,22 +106,35 @@ void saisirMotDePasseMasque(int *passwordadmin) {
     while (1) {
         ch = _getch();  // Get a character from user input without echoing
 
-        if (ch == 13) {  // Enter key
+        // If Enter is pressed, exit the loop
+        if (ch == 13) {
             break;
-        } else if (ch == 8) {  // Backspace key
+        }
+        // If Backspace is pressed, remove the last digit and erase the character
+        else if (ch == 8) {
             if (i > 0) {
                 i--;
                 *passwordadmin /= 10;  // Remove the last digit
                 printf("\b \b");  // Erase last character (asterisk)
             }
-        } else if (ch >= '0' && ch <= '9') {  // If the character is a digit
+        }
+        // If a digit is entered, add it to the password
+        else if (ch >= '0' && ch <= '9') {
             *passwordadmin = *passwordadmin * 10 + (ch - '0');  // Add digit to password
             i++;
             printf("*");  // Mask the character by printing an asterisk
         }
-    }
 
-    printf("\n");  // Newline after input is finished
+        // If more than 4 digits are entered, show a message and reject the input
+        if (i > 4) {
+            gotoxy(10, 15);  // Adjust the position of the message
+            printf("Le mot de passe doit contenir exactement 4 chiffres.\n");
+            *passwordadmin = 0;  // Reset the password
+            i = 0;  // Reset the digit count
+            printf("\n");
+            printf("Entrez à nouveau le mot de passe (4 chiffres): ");
+        }
+    }
 }
 void hideCursor() {
     HANDLE consoleHandle = GetStdHandle(STD_OUTPUT_HANDLE);
@@ -156,36 +177,92 @@ void print_box(int x, int y, int width, int height) {
 
     printf("\n");
 }
+
+
+// Function to print a box with "██" borders and centered title
 void print_box_with_title(int x, int y, int width, int height, const char *title) {
     int title_length = strlen(title);
-    int padding = (width - title_length) / 2;
-    printf("\033[0;34;40m"); 
-    gotoxy(x, y);
-    for (int i = 0; i < padding; i++) {
-        printf("█");
-    }
-    printf("%s", title);
-    for (int i = padding + title_length; i < width; i++) {
-        printf("█");
-    }
+    int title_padding = (width - title_length - 4) / 2; // Adjust for centering
 
-    // Middle part of the box
+    setConsoleColor(15, 1); // White text on blue background
+
+    // Top Border with Title
+    gotoxy(x, y);
+    printf("██"); // Top-left corner (double)
+    for (int i = 0; i < width - 4; i++) { // Adjust width for corners
+        if (i == title_padding) { 
+            printf(" %s ", title); // Title with spaces around it
+            i += title_length + 1;
+        } else {
+            printf("█");
+        }
+    }
+    printf("██"); // Top-right corner (double)
+
+    // Middle Part of the Box
     for (int i = 1; i < height - 1; i++) {
         gotoxy(x, y + i);
-        printf("█");
-        for (int j = 1; j < width - 1; j++) {
-            printf(" ");
+        printf("██"); // Left border (double)
+        for (int j = 0; j < width - 4; j++) {
+            printf(" "); // Empty space inside
         }
-        printf("█");
+        printf("██"); // Right border (double)
     }
 
-    // Bottom border
+    // Bottom Border
     gotoxy(x, y + height - 1);
-    for (int i = 0; i < width; i++) {
+    printf("██"); // Bottom-left corner (double)
+    for (int i = 0; i < width - 4; i++) { // Adjust width for corners
         printf("█");
     }
-    printf("\n");
-    printf("\033[0m");
+    printf("██"); // Bottom-right corner (double)
+
+    setConsoleColor(15, 0); // Reset to white text on black background
+}
+
+// Function to print a box with "██" borders and centered title
+void setConsoleColor(int textColor, int backgroundColor) {
+    SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), backgroundColor * 16 + textColor);
+}
+
+// Loading Screen Function
+void loadingScreen() {
+    setConsoleColor(15, 1); // White text on Blue background
+
+    int barLength = 35;     // Length of the loading bar
+    char block = 219;       // Block character "█"
+
+    // Display the loading text
+    gotoxy(40, 11);
+    printf(".......EN COURS.......");
+
+    // Draw the empty progress bar
+    gotoxy(40, 12);
+    for (int i = 0; i < barLength; i++) {
+        printf(" "); // Spaces with blue background
+    }
+
+    // Fill the progress bar
+    for (int j = 0; j <= barLength; j++) {
+        // Draw the progress bar
+        gotoxy(40 + j, 12);
+        printf("%c", block);
+
+        // Display the percentage at the end of the bar
+        gotoxy(40 + barLength + 2, 12);
+        printf("%d%%", (j * 100) / barLength);
+
+        Sleep(50); // Adjust the speed of loading
+    }
+
+    // Final Message
+    setConsoleColor(15, 1); // Maintain theme
+    gotoxy(40, 14);
+    printf("Chargement termine avec succes!");
+
+    // Reset console to default settings
+    setConsoleColor(15, 0); // White text on black background
+    gotoxy(0, 20); // Reset cursor position
 }
 void clear_box_content(int x_start, int y_start, int width, int height) {
     for (int i = 1; i < height - 1; i++) { 
@@ -203,21 +280,11 @@ void delay(unsigned int x){
         j = i;
     }
 }
-void loadingPage(){
-    int a, i;
-    clear_screen();
-    gotoxy(45,7);
-    puts("*********** NOW LOADING ***********");
-   /* gotoxy(15, 9);
-    box(50, 3, 15, 9);
-    gotoxy(16,10);*/
 
-    a= 16;
-    for(i = 1; i < 50; i++){
-        printf("\xB1");
-        delay(100);
-        gotoxy(a++, 10);
-    }
+
+void resetColor() {
+    HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
+    SetConsoleTextAttribute(hConsole, 15 | (1 << 4)); // 15 = White text, 1 << 4 = Blue background
 }
 /**********************************************notification fonction ************************************************** */ 
 void NOTIFICATION(char *std, int trv) {
@@ -322,7 +389,7 @@ void ECRIRELESCLIENTSbin(FILE *fich, client cl) {
     fclose(fich);
 }
 void ECRIRELESCLIENTStxt(FILE *fich, client cl) {
-    fich = fopen("clients.txt", "a+");
+    fich = fopen("data/clients.txt", "a+");
     if (fich == NULL) {
         perror("Error opening file for writing");
         exit(1);
@@ -338,7 +405,7 @@ void ECRIRELESCLIENTStxt(FILE *fich, client cl) {
 
 }
 void ECRIRELESCOMPTES(FILE *fich,compte c,client cl) {
-    fich = fopen("comptes.txt", "a+");
+    fich = fopen("data/comptes.txt", "a+");
     if (fich == NULL) {
         perror("Error opening file for writing");
         exit(1);
@@ -351,7 +418,7 @@ void ECRIRELESCOMPTES(FILE *fich,compte c,client cl) {
 
 }
 void ECRIRELESHISTORIQUE(FILE *fich,compte c) {
-    fich = fopen("historique.txt", "a+");
+    fich = fopen("data/historique.txt", "a+");
     if (fich == NULL) {
         perror("Error opening file for writing");
         exit(1);
@@ -366,7 +433,7 @@ int getLastClientId(FILE *fich) {
     int lastId = 100000;
     int tempId;
 
-    fich = fopen("clients.txt", "r");
+    fich = fopen("data/clients.txt", "r");
     if (fich == NULL) {
         printf("Fichier non trouve.");
         return lastId;
@@ -388,7 +455,7 @@ int getLastIdHistorique(FILE *fich) {
     int lastIdHis = 1;
     int tempIdHis;
     
-    fich = fopen("comptes.txt", "r");
+    fich = fopen("data/comptes.txt", "r");
     if (fich == NULL) {
         printf("Fichier non trouve.", lastIdHis);
         return lastIdHis;
@@ -409,7 +476,7 @@ void login() {
     int idCompt_search, password_search;
     FILE* fich;
     print_box_with_title(10,5,100,20,"*******LOGIN*******");
-    printf("\033[0;34;40m");
+    setConsoleColor(15,1);
     gotoxy(35,11);printf("Donner le numero de compte (5 chiffres) : ");
     gotoxy(35,15);printf("Donner le mot de passe  (4 chiffres) : ");
     gotoxy(10, 25);tim_function();
@@ -421,13 +488,13 @@ void login() {
     gotoxy(35 + strlen("Donner le mot de passe (4 chiffres) : "), 15);  // Placer le curseur juste apres Donner le mot de passe (4 chiffres) : 
     saisirMotDePasseMasque(&password_search);
     //scanf("%d",&password_search);
-
     // Authentification
     int trouver = authentification(idCompt_search, password_search);
     
     if (trouver == 1) {
         // Connexion réussie
-        NOTIFICATION("✅ CONNEXION RÉUSSIE",0);
+            SesionAdmin(idCompt_search,"Login");
+        NOTIFICATION("CONNEXION RÉUSSIE",0);
         getch();
         PAGEPROFIL(fich,idCompt_search);
     } else {
@@ -437,11 +504,12 @@ void login() {
         NOTIFICATION("❌Erreur système ❌",0);
         getch();
         system("cls");
-        NOTIFICATION("⚠️ Numéro de compte ou mot de passe incorrect ⚠️",0);
+        NOTIFICATION(" Numéro de compte ou mot de passe incorrect ",0);
         print_box(10,5,100,20);
-        gotoxy(35,11);printf("1-connexion .");
-        gotoxy(35,15);printf("2-retourner  au menu ");
-        gotoxy(36+strlen("2-retourner  au menu "), 8);
+        gotoxy(35,11);printf("1-CONNEXION .");
+        gotoxy(35,15);printf("2-Retourner  au menu ");
+        gotoxy(35,17);printf("Donner votre choix : ");
+        gotoxy(35+strlen("Donner votre choix : "), 17);
         scanf("%d", &choix);
         switch (choix) {
             case 1:
@@ -453,8 +521,7 @@ void login() {
                 afficher_menu(); // Retourner au menu
                 break;
             default:
-                system("cls");
-                exit(0); 
+                
                 break;
         }
     }
@@ -466,7 +533,7 @@ int authentification(int ncompte_saisie, int pswd_saisie) {
     client cl;
     char line[200];
 
-    fich = fopen("comptes.txt", "r");
+    fich = fopen("data/comptes.txt", "r");
     if (fich == NULL) {
         perror("Erreur lors de l'ouverture du fichier");
         exit(1);
@@ -485,22 +552,10 @@ int authentification(int ncompte_saisie, int pswd_saisie) {
     fclose(fich);
     return 0; 
 }
-int verification_mdp() {
-    int N_compte_saisie, mdp_actuel_saisie;
 
-do
-    {
-    printf("Pour la confirmation : \n");
-    printf("Donner votre numero de compte : \t");
-    scanf("%d", &N_compte_saisie);
-    printf("Donner le mot de passe actuel : \t");
-    saisirMotDePasseMasque(&mdp_actuel_saisie);
-    } while (authentification(N_compte_saisie,mdp_actuel_saisie)==0);
-    return authentification(N_compte_saisie,mdp_actuel_saisie);
-}
 int verification(int numcompte) {
 
- FILE *fich = fopen("comptes.txt", "r");
+ FILE *fich = fopen("data/comptes.txt", "r");
     if (fich == NULL) {
         printf("Erreur d'ouverture du fichier.\n");
         return;
@@ -519,6 +574,77 @@ int verification(int numcompte) {
     }
     fclose(fich);
 }
+//*****************************************************************************creation de compte *********************************************************************************** */
+void interfece2() {
+    clear_screen();
+    
+   FILE*fich;
+         print_box_with_title(10, 5, 100, 20, "*** Offres de la Banque ***");
+    int x = 12, y = 5;
+    setConsoleColor(15, 1);
+
+    // Professionnel and Individuel on the same line
+    gotoxy(x + 8, y + 3);
+    printf("*** Offres Pro *** ");
+
+    // Professionnel offers
+    gotoxy(x + 2, y + 4); 
+    printf("1. Comptes Pro: Adapté à votre entreprise.\n");
+    gotoxy(x + 2, y + 5);
+    printf("2. Épargne Pro: Taux compétitifs.\n");
+    gotoxy(x + 2, y + 6);
+    printf("3. Prêts Pro: Financement flexible.\n");
+    gotoxy(x + 2, y + 7);
+    printf("4. Services Marchands: Solutions de paiement.\n");
+    gotoxy(x + 2, y + 8);
+    printf("5. Paie Pro: Automatisée.\n");
+    gotoxy(x + 2, y + 9);
+    printf("6. Plan Financier: Stratégie pour entreprises.\n");
+
+    // Individuel offers
+    gotoxy(x + 55, y + 3);printf("*** Offres Indivi *** ");
+    gotoxy(x + 50, y + 4); // Move to the right for Individual offers
+    printf("1. Comptes Perso: Frais réduits.\n");
+    gotoxy(x + 50, y + 5);
+    printf("2. Épargne Perso: Taux élevés.\n");
+    gotoxy(x + 50, y + 6);
+    printf("3. Prêts Perso: Taux compétitifs.\n");
+    gotoxy(x + 50, y + 7);
+    printf("4. Cartes de Crédit: Cashback, récompenses.\n");
+    gotoxy(x + 50, y + 8);
+    printf("5. Investissements: Plans personnalisés.\n");
+    gotoxy(x + 50, y + 9);
+    printf("6. Prêts Auto & Immo: Financement flexible.\n");
+
+     // Bottom box for choice: Continue or Back
+    int box_x = 10, box_y = 17;
+    print_box_with_title(box_x, box_y, 100, 7, "*** Choisissez une option ***");
+    gotoxy(box_x + 32, box_y + 2);
+    setConsoleColor(15,1);
+    printf("1. Continuer\n");
+    gotoxy(box_x + 32, box_y + 3);
+    printf("2. Retour\n");
+
+    int choice;
+    do {
+        gotoxy(box_x + 2, box_y + 4);  // Move the cursor to the prompt position
+        choice = getch(); // Wait for user input
+
+        if (choice == '1') {
+            SIGNIN(fich);
+            break;  // Exit the loop and continue
+        } else if (choice == '2') {
+           afficher_menu();
+            break;  // Exit the loop and go back
+        } else {
+            // Handle invalid input
+            printf("\nChoix invalide, veuillez entrer 1 pour continuer ou 2 pour revenir.\n");
+        }
+    } while (choice != '1' && choice != '2');
+    
+}
+
+
 int SIGNIN(FILE* fich) {
     system("Cls");
     client c1;
@@ -536,25 +662,26 @@ int SIGNIN(FILE* fich) {
 
     do {
         print_box_with_title(x,y,100,20," CREATION DE COMPTE ");
-printf("\033[0;34;40m");
-         x+=2;y+=2;
-        gotoxy(x, y++);
-        printf(" ⚠️ ATTENTION ⚠️: VOUS ÊTES RESPONSABLE DE CHAQUE ERREUR DANS VOS INFORMATIONS.\n");
-        getchar();
+        setConsoleColor(15,1);
+        //printf("\033[0;34;40m");
+         x+=3;y+=2;
+        gotoxy(x+4, y++);
+        printf(" ATTENTION : VOUS ÊTES RESPONSABLE DE CHAQUE ERREUR DANS VOS INFORMATIONS.");
+        getch();
         gotoxy(x, y++);
         printf("Donner votre nom:  \t ");
         fgets(c1.nom, sizeof(c1.nom), stdin);
         remove_newline(c1.nom);
         
         gotoxy(x, y++);
-        printf(" Donner votre prenom: \t");
+        printf("Donner votre prenom: \t");
         fgets(c1.prenom, sizeof(c1.prenom), stdin);
         remove_newline(c1.prenom);
        
        
  do {
         gotoxy(x, y++);
-        printf(" Donner votre sexe ( Homme:H / Femme:F): \t");
+        printf("Donner votre sexe ( Homme:H / Femme:F): \t");
         scanf(" %c", &c1.sexe); 
         if (c1.sexe != 'H' && c1.sexe != 'h' && c1.sexe != 'F' && c1.sexe != 'f') {
             gotoxy(x,y++);
@@ -591,17 +718,6 @@ printf("\033[0;34;40m");
         printf("Donner votre lieu de naissance :\t");
         fgets(c1.lieudenaissa, sizeof(c1.lieudenaissa), stdin);
         remove_newline(c1.lieudenaissa);
-      do {
-    gotoxy(x, y++);
-    printf("Donner le type de compte (professionel(P)/individuel(I)): \t");
-    fgets(c.typecompte, sizeof(c.typecompte), stdin);
-    remove_newline(c.typecompte);  // Remove the newline character if it exists
-
-    if (c.typecompte[0] != 'P' && c.typecompte[0] != 'I') {
-        gotoxy(x, y++);
-        printf("Entrée invalide. Veuillez entrer 'P' pour professionnel ou 'I' pour individuel.\n");
-    }
-    } while (c.typecompte[0] != 'P' && c.typecompte[0] != 'I');
         gotoxy(x, y++);
         printf("Donner votre numero de carte national (CIN): \t");
         fgets(c1.CIN, sizeof(c1.CIN), stdin);
@@ -623,39 +739,56 @@ printf("\033[0;34;40m");
                 printf("Le numero est incorrect ! Il doit contenir exactement 9 chiffres.\n");
             }
         } while (strlen(c1.phone) != 9);
-       do {
+        do {
+        gotoxy(x, y++);
+        printf("Donner le type de compte (professionel(P)/individuel(I)): \t");
+        fgets(c.typecompte, sizeof(c.typecompte), stdin);
+        remove_newline(c.typecompte); 
+
+         if (c.typecompte[0] != 'P' && c.typecompte[0] != 'I') {
+        gotoxy(x, y++);
+        printf("Entrée invalide. Veuillez entrer 'P' pour professionnel ou 'I' pour individuel.\n");
+         }
+
+
+
+        } while (c.typecompte[0] != 'P' && c.typecompte[0] != 'I');
+        while (getchar() != '\n'); 
+          do {
         gotoxy(x, y++);
         printf("Entrer le dépôt initial: \t ");
         scanf("%d", &c.h.montant);
         if (c.h.montant <= 100) {
         gotoxy(x, y++);
         printf("Le montant doit être supérieur à 100. Veuillez entrer un montant valide: \t ");
-    }
-} while (c.h.montant <= 100);
-
-        while (getchar() != '\n'); 
+    }   
+    } while (c.h.montant <= 100);
         gotoxy(x,y++ );
          printf("TU PEUX SAUVEGARDER VOTRE INFORMATIONS O/N :  \t");
-    scanf(" %c", &choix);
+        scanf(" %c", &choix);
     while (getchar() != '\n'); // Clear input buffer
 
     // Convert input to uppercase for consistent comparison
     choix = toupper(choix);
 
     if (choix != 'O' && choix != 'N') {
-        printf("\033[0;31m"); // Set text color to red for the error message
         printf("Choix invalide. Veuillez entrer 'O' pour Oui ou 'N' pour Non.\n");
-        printf("\033[0m");   // Reset text color
     }   
-    } while (choix != 'O' && choix != 'N');     
+    } while (choix != 'O' && choix != 'N');
+    
+    if(c.typecompte[0] == 'P'){
+        sizezProfesionelle(c1);
+
+    }     
     clear_box_content(10,5,100,20);
+    print_box_with_title(10,5,100,20,"***sign in***");
     int w=17,z=12;
-    printf("\033[0;34;40m");
     do
     {
         gotoxy(w,z++ );
+        setConsoleColor(15,1);
     printf("TU peux donner le numero de compte  (5 chiffres) :  ");
-    scanf("%d", &c1.c.Ncompte);
+    scanf("%5d", &c1.c.Ncompte);
     if(verification(c1.c.Ncompte)==1){
         gotoxy(w,z++);
         printf("NUMERO DE COMPTE DEJA EXISITE .\n");
@@ -663,12 +796,18 @@ printf("\033[0;34;40m");
    
 
     } while (verification(c1.c.Ncompte)==1);
-    gotoxy(w,z++ );
-    printf("TU peux donner le mot de passe (4 chiffres) : ");
+    do {
+        gotoxy(w, z++);
+        printf("Tu peux donner le mot de passe (4 chiffres max): ");
+        saisirMotDePasseMasque(&c.password);  // Masked password input
+        printf("\n");
 
-    saisirMotDePasseMasque(&c.password);
-    printf("\033[0m");
-    
+        // Check if password is 4 digits long
+        if (c.password < 1000 || c.password > 9999) {  // Check if password is not 4 digits
+            gotoxy(w, z++);
+            printf("Le mot de passe doit contenir exactement 4 chiffres.\n");
+        }
+    } while (c.password < 1000 || c.password > 9999);  
     system("cls");
     c.dcreation.jour=local_time->tm_mday;
     c.dcreation.mois=local_time->tm_mon+1;
@@ -684,59 +823,134 @@ printf("\033[0;34;40m");
     ECRIRELESCLIENTStxt(fich,c1);
     ECRIRELESCOMPTES(fich,c,c1);
     ECRIRELESHISTORIQUE(fich,c);
-    NOTIFICATION(" ✅ Ton compte a ete enregistre avec succes. ✅ ",0);
-getch();
+    setConsoleColor(15,10);
+    NOTIFICATION("  Ton compte a ete enregistre avec succes.  ",0);
+    getch();
+    resetColor();
     afficher_menu();
 }
-void LIRECLIENTS(FILE *fich) {
-    clear_screen();
-    fich = fopen("clients.txt", "r");
+
+void afficher_compte(int numcompte, int trv) {
+    FILE *fich = fopen("data/comptes.txt", "r");
     if (fich == NULL) {
-        perror("Error opening file for reading");
-        exit(1);
+        printf("Erreur d'ouverture du fichier.\n");
+        return;
     }
-
-    char line[200];
+    client cl;
     
+    int trvw=0;
+    while (fscanf(fich, "%d %s %s %d/%d/%d %s %d %d %d\n", &cl.c.Ncompte, cl.nom, cl.prenom, 
+                  &cl.c.dcreation.jour, &cl.c.dcreation.mois, &cl.c.dcreation.anne, cl.c.typecompte, 
+                  &cl.c.solde, &cl.c.password, &cl.c.h.idhistorique) != EOF) {
+        if (cl.c.Ncompte == numcompte) {
+            if(trv==0){
+            setConsoleColor(15,1);
+            gotoxy(20,7); 
+            printf("╔═════════════════════════════════╗");
+            gotoxy(20 , 8); 
+            printf("║                                 ║ ");
+            gotoxy(20 , 9);  
+            printf("╚═════════════════════════════════╝");
+            gotoxy(21 , 8);printf("Compte : %d\n", cl.c.Ncompte);
+            gotoxy(20,10); 
+            printf("╔═════════════════════════════════╗");
+            gotoxy(20 , 11); 
+            printf("║                                 ║ ");
+            gotoxy(20 , 12);  
+            printf("╚═════════════════════════════════╝");
+            gotoxy(21 , 11);printf("Nom : %s\n", cl.nom);
+             gotoxy(20,13); 
+            printf("╔═════════════════════════════════╗");
+            gotoxy(20 , 14); 
+            printf("║                                 ║ ");
+            gotoxy(20 , 15);  
+            printf("╚═════════════════════════════════╝");
+            gotoxy(21 , 14); printf("Prénom : %s\n", cl.prenom);
+              gotoxy(20,16); 
+            printf("╔═════════════════════════════════╗");
+            gotoxy(20 , 17); 
+            printf("║                                 ║ ");
+            gotoxy(20 , 18);  
+            printf("╚═════════════════════════════════╝");
+            gotoxy(21 , 17); printf("Type de compte : %s\n", cl.c.typecompte);
+               gotoxy(20,19); 
+            printf("╔═════════════════════════════════╗");
+            gotoxy(20 , 20); 
+            printf("║                                 ║ ");
+            gotoxy(20 , 21);  
+            printf("╚═════════════════════════════════╝");
+            gotoxy(21 , 20);printf("Solde : %d DH\n", cl.c.solde);
+            trvw=1;
+            break; 
+            }else if (trv==1){
+                 gotoxy(35, 7);
+                printf("╔════════════════════════════════════════════════════════╗");
+                gotoxy(35, 8);
+                printf("║                                                        ║");gotoxy(42, 8);printf("Compte : %d\n", cl.c.Ncompte);
+                gotoxy(35, 9);
+                printf("║                                                        ║");gotoxy(42, 9);printf("Nom : %s\n", cl.nom);
+                gotoxy(35, 10);
+                printf("║                                                        ║"); gotoxy(42, 10);printf("Prénom : %s\n", cl.prenom);
+                gotoxy(35, 11);
+                printf("║                                                        ║"); gotoxy(42, 11);printf("Type de compte : %s\n", cl.c.typecompte);
+                gotoxy(35, 12);
+                printf("║                                                        ║"); gotoxy(42, 12);printf("Solde : %d\n", cl.c.solde);
+                gotoxy(35, 13);
+                printf("║                                                        ║");gotoxy(42,13);printf("Date de creation : %d/%d/%d",cl.c.dcreation.jour, cl.c.dcreation.mois, cl.c.dcreation.anne);
+                gotoxy(35, 14);
+                printf("║                                                        ║");gotoxy(42, 14);printf("Solde : %d DH\n", cl.c.solde);
+                gotoxy(35, 15);
+                printf("╚════════════════════════════════════════════════════════╝");
+                 trvw=1;
+                int box_x = 10, box_y = 17;
+                print_box_with_title(box_x, box_y, 100, 7, "*** Choisissez une option ***");
+                gotoxy(box_x + 32, box_y + 2);
+                setConsoleColor(15,1);
+                printf("1. Supprimer le compte \n");
+                gotoxy(box_x + 32, box_y + 3);
+                printf("2. Retour\n");
 
-    fgets(line, sizeof(line), fich);
-    fgets(line, sizeof(line), fich);
+                int choice;
+                do {
+                    gotoxy(box_x + 2, box_y + 4);  // Move the cursor to the prompt position
+                    choice = getch(); // Wait for user input
 
-    printf("Liste des clients :\n");
-    while (fgets(line, sizeof(line), fich) != NULL) {
-        client client;
-        
-        if (sscanf(line, "%d | %19[^|] | %19[^|] | %d/%d/%d | %19[^|] | %9[^|] | %99[^|] | +212 %9[^|] | %c",
-                   &client.idclient, client.nom, client.prenom,
-                   &client.d.jour, &client.d.mois, &client.d.anne,
-                   client.lieudenaissa, client.CIN, client.adress, client.phone,
-                   &client.sexe) == 11) { 
-            printf("Nom: %s \n Prenom: %s \n Date de naissance: %d/%d/%d \n Lieu de naissance: %s \n CIN: %s \n Address: %s \n Phone: +212 %s \n Sexe: %c\n",
-                   client.nom, client.prenom, 
-                   client.d.jour, client.d.mois, client.d.anne,
-                   client.lieudenaissa, client.CIN, client.adress, client.phone,
-                   client.sexe);
-        } else {
-            printf("Erreur de lecture pour la ligne : %s\n", line);
+                    if (choice == '1') {
+                        fermer_comptes(numcompte);
+                        break;  // Exit the loop and continue
+                    } else if (choice == '2') {
+                         MENUE_ADMIN();
+                        break;  // Exit the loop and go back
+                    } else {
+                        // Handle invalid input
+                        printf("\nChoix invalide, veuillez entrer 1 pour continuer ou 2 pour revenir.\n");
+                    }
+                } while (choice != '1' && choice != '2');
+                 trvw=1;
+            }
+          
         }
     }
 
+    if (!trvw) {
+        printf("Compte avec le numéro %d non trouvé.\n", numcompte);
+    }
     fclose(fich);
 }
-void AFFICHAGECLIENT() {
+void affichageclient(int id_compte){
+      // Display all client information
     FILE *fich = fopen("data/clients.bin", "rb");
     if (fich == NULL) {
         perror("Error opening clients.bin for reading");
         exit(1);
     }
-
-    client cl;
-    int trv = 0;
-
+     client cl;
     while (fread(&cl, sizeof(client), 1, fich)) {
        
-            printf("\033[0;34;40m");
+       if(cl.c.Ncompte==id_compte){
+
             gotoxy(22,8);
+             setConsoleColor(15,1);
             printf("Nom complet: %s %s\n", cl.nom, cl.prenom);        
             gotoxy(22,14);
             printf("La date de naissance : %02d/%02d/%04d  A %s \n", cl.d.jour, cl.d.mois, cl.d.anne,cl.lieudenaissa);
@@ -744,60 +958,24 @@ void AFFICHAGECLIENT() {
             printf("L'address: %s\n", cl.adress);
             gotoxy(22,18);
             printf("Phone: +212 %s\n", cl.phone);
-            printf("\033[0m");
-  
-    }
-
-    fclose(fich);
-
-}
-
-void afficher_compte(int numcompte) {
-    FILE *fich = fopen("comptes.txt", "r");
-    if (fich == NULL) {
-        printf("Erreur d'ouverture du fichier.\n");
-        return;
-    }
-    client cl;
-    int trv = 0;
-    
-    while (fscanf(fich, "%d %s %s %d/%d/%d %s %d %d %d\n", &cl.c.Ncompte, cl.nom, cl.prenom, 
-                  &cl.c.dcreation.jour, &cl.c.dcreation.mois, &cl.c.dcreation.anne, cl.c.typecompte, 
-                  &cl.c.solde, &cl.c.password, &cl.c.h.idhistorique) != EOF) {
-        if (cl.c.Ncompte == numcompte) {
-            printf("\033[0;34;40m");
-            gotoxy(22,8);
-            printf("Compte : %d\n", cl.c.Ncompte);
-            gotoxy(22,10);
-            printf("Nom : %s\n", cl.nom);
-            gotoxy(22,12);
-            printf("Prénom : %s\n", cl.prenom);
-            gotoxy(22,14);
-            printf("Date de création : %02d/%02d/%04d\n", cl.c.dcreation.jour, cl.c.dcreation.mois, cl.c.dcreation.anne);
-            gotoxy(22,16);
-            printf("Type de compte : %s\n", cl.c.typecompte);
-            gotoxy(22,18);
-            printf("Solde : %d\n", cl.c.solde);
-            printf("\033[0m");
-            trv = 1;
-            break; 
-        }
-    }
-
-    if (!trv) {
-        printf("Compte avec le numéro %d non trouvé.\n", numcompte);
+       }
     }
     fclose(fich);
 }
 /********************************************************  */
 void modifier_adress_client(FILE* fich, client cl,int id_compte) {
     char nouvelle_adresse_saisie[100];
-    int N_compte_saisie;
+    int mdp_saisie;
     int trouve = 0;
-
+    print_box_with_title(10,5,100,20,"modification adresse");
+    setConsoleColor(15,1);
+    gotoxy(35,12);
     printf("Donner la nouvelle adresse : ");
     scanf(" %[^\n]%*c", nouvelle_adresse_saisie);
-
+    gotoxy(35,14);
+    printf("donner le mot de passe pour la confirmation : \t");
+    saisirMotDePasseMasque(&mdp_saisie);
+    if (authentification(id_compte,mdp_saisie)==1){
     fich = fopen("data/clients.bin", "rb+");
     if (fich == NULL) {
         perror("Erreur lors de l'ouverture du fichier clients.bin");
@@ -816,23 +994,36 @@ void modifier_adress_client(FILE* fich, client cl,int id_compte) {
 
     fclose(fich);
 
+    }
+
     if (!trouve) {
+        
         printf("Client non trouvé.\n");
     } else {
+         setConsoleColor(15,10);
+        SesionAdmin(id_compte,"modifier l'adresse");
         NOTIFICATION("Adresse modifiée avec succès.",0);
+        resetColor();
         getch();
+        clear_screen();
     }
+    
     MODIFIERCLIENT(fich,cl,id_compte);
 }
 void modifier_client_telephone(FILE* fich, client cl,int id_compte) {
     char nouvelle_telephone_saisie[20];
-    int N_compte_saisie;
+    int mdp_saisie;
     int trouve = 0;
-
+    print_box_with_title(10,5,100,20,"modification telephone ");
+    gotoxy(35,12);
+            setConsoleColor(15,1);
     printf("Donner le nouveau numéro de téléphone : ");
     scanf("%s", nouvelle_telephone_saisie);
-
-    fich = fopen("data/clients.bin", "rb+");
+    gotoxy(35,14);
+    printf("donner le mot de passe pour la confirmation : \t");
+    saisirMotDePasseMasque(&mdp_saisie);
+    if (authentification(id_compte,mdp_saisie)==1){
+  fich = fopen("data/clients.bin", "rb+");
     if (fich == NULL) {
         perror("Erreur lors de l'ouverture du fichier clients.bin");
         exit(1);
@@ -850,63 +1041,95 @@ void modifier_client_telephone(FILE* fich, client cl,int id_compte) {
 
     fclose(fich);
 
+    }
+
+  
     if (!trouve) {
         printf("Client non trouvé.\n");
     } else {
+        setConsoleColor(7,2);
+         SesionAdmin(id_compte,"modifier le telephone");
+         setConsoleColor(15,10);
         NOTIFICATION("Téléphone modifié avec succès.",0);
-getch();
+        getch();
     }
+    clear_screen();
+   
     MODIFIERCLIENT(fich,cl,id_compte);
 }
-void MODIFIERCLIENT(FILE* fich,client cl,int id_compte){
-    fich = fopen("clients.txt", "r");
-    if (fich == NULL) {
-        perror("Error opening file for reading");
-        exit(1);
-    }
-int choix=0;
-AFFICHAGECLIENT();
-do{
+void MODIFIERCLIENT(FILE *fich, client cl, int id_compte) {
 
-printf("MODIFIER CLIENT\n");
-printf("1- modifier l'adresse .\n");
-printf("2- modifier le numero .\n");
-printf("3-retourner  .\n");
-printf("donner votre choix : ");
-scanf("%d",&choix);
-switch (choix)
-{
-case 1:
-    system("cls");
-    modifier_adress_client(fich,cl,id_compte);
-    break;
-case 2 :
-system("cls");
-modifier_client_telephone(fich,cl,id_compte);
-break;
-case 3: 
-system("cls");
-PAGEPROFIL(fich,id_compte);
-break;
-default:
-    break;
-}
-}while(choix==0);
-   
-fclose(fich);
+  
+    int choix = 0;
 
+    do {
+        // Display modification options
+        print_box_with_title(10, 5, 100, 20, "MODIFICATION CLIENT ");
+        gotoxy(35,11);
+        affichageclient(id_compte);
+        setConsoleColor(15,1);
+        gotoxy(68, 11); printf("1- Modifier l'adresse .\n");
+        gotoxy(68, 13); printf("2- Modifier le numero .\n");
+        gotoxy(68, 15); printf("3- Retourner .\n");
+        gotoxy(68, 17); printf("Donner votre choix : \t");
+        scanf("%d", &choix);
+
+        // Handle user choice
+        switch (choix) {
+            case 1:
+                system("cls");
+                modifier_adress_client(fich, cl, id_compte); // Modify client address
+                break;
+            case 2:
+                system("cls");
+                modifier_client_telephone(fich, cl, id_compte); // Modify client phone
+                break;
+            case 3:
+                system("cls");
+                PAGEPROFIL(fich, id_compte); // Return to profile page
+                break;
+            default:
+                gotoxy(60, 16); printf("Choix invalide. Veuillez réessayer.\n");
+                break;
+        }
+    } while (choix != 3); // Loop until the user chooses to return
 }
+
 //
 
 void CHANGER_MOTDEPASSE(int numcompte) {
-    int nouveau_mdp_saisie;
+    int nouveau_mdp_saisie, nouveau_mdp_saisie1;
     int trouve = 0;
-    trouve=verification_mdp();
+    int mdp_actuel_saisie;
+    print_box_with_title(10,5,100,20,"***CHANGEMENT DE MDP***");
+do
+    {
+         setConsoleColor(15,1);
+    gotoxy(31,10); printf("Pour la confirmation : \n");
+    gotoxy(31,11);printf("Donner le mot de passe actuelle   (4 chiffres) : ");
+    gotoxy(31+strlen("Donner le mot de passe actuelle   (4 chiffres) : "),11);
+    scanf("%d", &mdp_actuel_saisie);
+    } while (authentification(numcompte,mdp_actuel_saisie)==0);
+
+    trouve=authentification(numcompte,mdp_actuel_saisie);
     if(trouve==1){
-    printf("Donner le nouveau mot de passe (4 chiffres) : \t");
-    scanf("%4d", &nouveau_mdp_saisie);
+   do {
+        gotoxy(31, 13);
+        printf("Donner le nouveau mot de passe (4 chiffres) : ");
+        scanf("%d",&nouveau_mdp_saisie);
+        gotoxy(31, 15);
+        printf("\nDonner le mot de passe pour verification : ");
+        saisirMotDePasseMasque(&nouveau_mdp_saisie1);
+
+        // If passwords don't match, display an error message
+        if (nouveau_mdp_saisie1 != nouveau_mdp_saisie) {
+            gotoxy(31,16);
+            setConsoleColor(4,1);
+            printf("\nLe mot de passe n'est pas exact. Veuillez reessayer.\n");
+        }
+    } while (nouveau_mdp_saisie1 != nouveau_mdp_saisie);
     }
-     FILE *fichier = fopen("comptes.txt", "r+"); // Open file for reading and writing
+     FILE *fichier = fopen("data/comptes.txt", "r+"); // Open file for reading and writing
     client cl;
     trouve = 0;
 
@@ -959,20 +1182,24 @@ void CHANGER_MOTDEPASSE(int numcompte) {
     if (!trouve) {
         printf("Client non trouvé.\n");
     } else {
-        printf("Mot de passe modifié avec succès.\n");
+        setConsoleColor(15,10);
+        NOTIFICATION("Mot de passe modifié avec succès.\n",0);
+        SesionAdmin(numcompte,"modification mdp");
+        resetColor();
+        getch();
     }
     PAGEPROFIL(fichier,numcompte);
 }
 ///lsite des operation 
 void operation_liste(int numcompte){
     int choix = 0;
+    system("cls");
     FILE*fich;
-        system("cls");
-    
      do {
-        system("cls");
+        
+        
         print_box_with_title(10, 5, 100, 20, "*****LES OPERATIONS*****");
-        printf("\033[0;34;40m");
+        setConsoleColor(15,1);
         gotoxy(35, 11); printf("1-Dépôt\n");
         gotoxy(35, 13); printf("2-RETRAIT.\n");
         gotoxy(35, 15); printf("3-VIREMENTS.\n");
@@ -999,6 +1226,7 @@ void operation_liste(int numcompte){
         PAGEPROFIL(fich,numcompte);
         break;
     default:
+        setConsoleColor(15,4);
         NOTIFICATION("INVALID CHOIX .REESAYER",0);
         getch();
         break;
@@ -1020,8 +1248,8 @@ int PAGEPROFIL(FILE* fich,int id_compte){
     
     
     gotoxy(35,11);
-    afficher_compte(id_compte);
-    printf("\033[0;34;40m");
+    afficher_compte(id_compte,0);
+        setConsoleColor(15,1);
 
     gotoxy(60, 8);
     printf("1-FAIRE DES OPPERATIONS .\n");
@@ -1068,12 +1296,14 @@ int PAGEPROFIL(FILE* fich,int id_compte){
             break;
         case 5:
             clear_screen();
-           Supresion_compt();
+           Supresion_compt(id_compte,0);
             break;
         case 6:
             afficher_menu();
             break;
         default:
+                setConsoleColor(15,4);
+
             NOTIFICATION("erreur de saisir...  ",0);
             break;
         }
@@ -1122,6 +1352,176 @@ void movingBanner(const char *text) {
 }
 
 void afficher_menu() {
+    FILE *fich;
+    // Define menu items and title
+    char *menu_items[] = {
+        "SIGN IN",
+        "LOGIN",
+        "ADMIN",
+        "QUIT APPLICATION",
+        NULL // Null-terminated list
+    };
+    char *menu_title = "ACCEUIL";
+
+    const int box_x = 10;
+    const int box_y = 5;
+    const int box_width = 100;
+    const int box_height = 20;
+
+    while (1) {
+        system("cls");
+
+        // Draw the box with the title
+        print_box_with_title(box_x, box_y, box_width, box_height, menu_title);
+
+        // Calculate the starting position to center the menu items inside the box
+        int menu_start_y = box_y + (box_height / 2) - 2; // Center vertically
+        int menu_start_x = box_x + (box_width / 2) - 10; // Approx center horizontally (adjust padding as needed)
+
+        // Display the menu and get the user's choice
+        int selected_option = 0;
+        int key;
+        int item_count = 0;
+
+        // Count menu items
+        while (menu_items[item_count] != NULL) {
+            item_count++;
+        }
+
+        while (1) {
+            // Display menu options inside the box
+            for (int i = 0; i < item_count; i++) {
+                gotoxy(menu_start_x, menu_start_y + i * 2); // Space out options vertically
+                if (i == selected_option) {
+                    setConsoleColor(2, 1); // Green for selected option with black background
+                    printf("> %s", menu_items[i]);
+                } else {
+                    setConsoleColor(15, 1); // White text with black background for unselected options
+                    printf("  %s", menu_items[i]);
+                }
+            }
+
+            // Get user input for navigation
+            key = _getch();
+            if (key == 224) { // Arrow key prefix
+                key = _getch();
+                if (key == 72 && selected_option > 0) { // Up arrow
+                    selected_option--;
+                } else if (key == 80 && selected_option < item_count - 1) { // Down arrow
+                    selected_option++;
+                }
+            } else if (key == 13) { // Enter key
+                break;
+            }
+
+            // Clear the menu area (without clearing the box)
+            for (int i = 0; i < item_count; i++) {
+                gotoxy(menu_start_x, menu_start_y + i * 2);
+                printf("                    "); // Clear line with spaces
+            }
+        }
+
+        // Act based on the selected choice
+        switch (selected_option) {
+            case 0:
+                system("cls");
+                interfece2();
+                break;
+            case 1:
+                system("cls");
+                login();
+                break;
+            case 2:
+                system("cls");
+                LOGINADMIN();
+                break;
+            case 3:
+                system("cls");
+                        setConsoleColor(15,10);
+                NOTIFICATION("THANK YOU FOR YOUR VISIT .....", 1);
+                return; // Exit the menu loop
+
+            default:
+                system("cls");
+                        setConsoleColor(15,4);
+
+                NOTIFICATION("Invalid input. Please try again.", 0);
+             
+                break;
+        }
+    }
+}
+
+        
+/*
+// Function to display the menu
+void afficher_menu() {
+    char *menu_items[] = {"SIGN IN", "LOGIN", "ADMIN", "QUIT APPLICATION", NULL};
+    char *menu_title = "ACCEUIL";
+
+    const int box_x = 10;
+    const int box_y = 5;
+    const int box_width = 100;
+    const int box_height = 20;
+
+    int selected_option = 0;
+
+    while (1) {
+        clear_screen();
+        print_box_with_title(box_x, box_y, box_width, box_height, menu_title);
+
+        int menu_start_y = box_y + (box_height / 2) - 2;
+        int menu_start_x = box_x + (box_width / 2) - 10;
+
+        // Display menu options
+        for (int i = 0; menu_items[i] != NULL; i++) {
+            gotoxy(menu_start_x, menu_start_y + i * 2);
+            if (i == selected_option) {
+                setConsoleColor(2, 15); // Highlight selected option
+                printf("> %s", menu_items[i]);
+            } else {
+                setConsoleColor(15, 0); // Normal text
+                printf("  %s", menu_items[i]);
+            }
+        }
+
+        // Input handling
+        int key = _getch();
+        if (key == 224) { // Arrow key prefix
+            key = _getch();
+            if (key == 72 && selected_option > 0) { // Up arrow
+                selected_option--;
+            } else if (key == 80 && selected_option < 3) { // Down arrow
+                selected_option++;
+            }
+        } else if (key == 13) { // Enter key
+            // Handle actions for selected menu item
+            switch (selected_option) {
+                case 0:
+                    clear_screen();
+                    printf("SIGN IN selected.\n");
+                    system("pause");
+                    break;
+                case 1:
+                    clear_screen();
+                    printf("LOGIN selected.\n");
+                    system("pause");
+                    break;
+                case 2:
+                    clear_screen();
+                    printf("ADMIN selected.\n");
+                    system("pause");
+                    break;
+                case 3:
+                    clear_screen();
+                    printf("QUIT APPLICATION selected.\n");
+                    return; // Exit the loop
+            }
+        }
+    }
+}*/
+
+/*void afficher_menu() {
     int choix = 1;  // Start with the first option selected
     client c;
     FILE *fich;
@@ -1147,11 +1547,11 @@ void afficher_menu() {
         printf("\033[0;34;40m");
 
         // Display menu options without numbers
-        gotoxy(35, 11); printf(choix == 1 ? "> SIGN IN.\n" : "  SIGN IN.\n");
-        gotoxy(35, 13); printf(choix == 2 ? "> LOGIN.\n" : "  LOGIN.\n");
-        gotoxy(35, 15); printf(choix == 3 ? "> ADMIN.\n" : "  ADMIN.\n");
-        gotoxy(35, 17); printf(choix == 4 ? "> QUIT APPLICATION.\n" : "  QUIT APPLICATION.\n");
-        gotoxy(35, 19); printf("Please use arrow keys to navigate or press 'q' to quit.");
+        gotoxy(35, 11);setConsoleColor(10,0); printf(choix == 1 ? "> SIGN IN.\n" : "  SIGN IN.\n");
+        gotoxy(35, 13);setConsoleColor(10,0); printf(choix == 2 ? "> LOGIN.\n" : "  LOGIN.\n");
+        gotoxy(35, 15); setConsoleColor(10,0);printf(choix == 3 ? "> ADMIN.\n" : "  ADMIN.\n");
+        gotoxy(35, 17); setConsoleColor(10,0);printf(choix == 4 ? "> QUIT APPLICATION.\n" : "  QUIT APPLICATION.\n");
+        gotoxy(35, 19);setConsoleColor(10,0); printf("Please use arrow keys to navigate or press 'q' to quit.");
 
         gotoxy(35, 21); printf("Press Enter to select an option.");
 
@@ -1215,78 +1615,73 @@ void afficher_menu() {
 
         printf("\033[0m"); // Reset text color
     } while (choix != 4);
-}
+}*/
 
-void FermetCompt() {
-    FILE *fich = fopen("comptes.txt", "r");
-    if (fich == NULL) {
-        printf("Problème d'ouverture du fichier original.\n");
-        exit(1);
-    }
 
-    FILE *fichancien = fopen("temp.txt", "w");
-    if (fichancien == NULL) {
-        printf("Problème d'ouverture du fichier temporaire.\n");
-        fclose(fich);
-        exit(1);
+void fermer_comptes(int numcompte){
+    FILE *file = fopen("data/comptes.txt", "r");
+    FILE *temp = fopen("data/temp.txt", "w");
+
+    if (!file || !temp) {
+        printf("Error opening file!\n");
+        return;
     }
 
     client cl;
-    int id_search, password;
-    int compt_trouver = 0;
+    int found = 0;
 
-    system("color 01");
-    printf("\n⚠️ Note bien que la suppression s'effectue définitivement !\n");
-    printf("\nEntrer le numéro de votre compte : ");
-    scanf("%d", &id_search);
-    printf("Entrer le mot de passe : ");
-    scanf("%d", &password);
-
-    while (fscanf(fich, "%d %s %s %d/%d/%d %s %d %d %d\n",
-                  &cl.c.Ncompte, cl.nom, cl.prenom,
-                  &cl.c.dcreation.jour, &cl.c.dcreation.mois, &cl.c.dcreation.anne,
-                  cl.c.typecompte, &cl.c.solde, &cl.c.password, &cl.c.h.idhistorique) == 10) {
-        if (cl.c.Ncompte == id_search && cl.c.password == password) {
-            compt_trouver = 1; 
+    while (fscanf(fich, "%d %s %s %d/%d/%d %s %d %d %d\n", &cl.c.Ncompte, cl.nom, cl.prenom, 
+                  &cl.c.dcreation.jour, &cl.c.dcreation.mois, &cl.c.dcreation.anne, cl.c.typecompte, 
+                  &cl.c.solde, &cl.c.password, &cl.c.h.idhistorique) != EOF) {
+        if (cl.c.Ncompte == numcompte) {
+            found = 1;
         } else {
-            fprintf(fichancien, "%d %s %s %d/%d/%d %s %d %d %d\n",
-                    cl.c.Ncompte, cl.nom, cl.prenom,
-                    cl.c.dcreation.jour, cl.c.dcreation.mois, cl.c.dcreation.anne,
-                    cl.c.typecompte, cl.c.solde, cl.c.password, cl.c.h.idhistorique);
+           fprintf(temp, "%d %s %s %d/%d/%d %s %d %d %d\n",
+            cl.c.Ncompte, cl.nom, cl.prenom, cl.c.dcreation.jour, cl.c.dcreation.mois, cl.c.dcreation.anne,cl.c.typecompte, cl.c.solde,cl.c.password,cl.c.h.idhistorique);
         }
     }
 
-    fclose(fich);
-    fclose(fichancien);
+    fclose(file);
+    fclose(temp);
 
-    if (compt_trouver) {
-        rename("comptes.txt","datacompte.txt");         
-        rename("temp.txt", "comptes.txt"); // Renomme le fichier temporaire
+    remove("data/comptes.txt");
+    rename("data/temp.txt", "data/comptes.txt");
 
-        system("cls");
-        printf("\n✅ La suppression du compte s'est effectuée avec succès ✅\n");
-        Sleep(3);
+    if (found) {
+        setConsoleColor(15,4);
+        NOTIFICATION("Compte supprimé avec succès!\n",0);
+        resetColor();
     } else {
-        remove("temp.txt"); // Supprime le fichier temporaire inutile
-        system("cls");
-        printf("\n❌ Erreur : Compte introuvable ou mot de passe incorrect ❌\n");
-        Sleep(3);
+        printf("Account with ID %d not found!\n", id);
     }
 }
-void Supresion_compt() {
-    int choix;
 
-    system("color 01");
-    printf("\n**** FERMETURE DE COMPTE ****\n");
+void Supresion_compt(int numcompte) {
+    int choix;
+    int mdp_saisie;
+    print_box_with_title(10,5,100,20,"**** FERMETURE DE COMPTE ****");
+    gotoxy(35,12);
+            setConsoleColor(15,1);
     printf("1. Fermer un compte\n");
+    gotoxy(35,14);
     printf("2. Retourner au menu principal\n");
-    printf("Entrer votre choix : ");
+    gotoxy(35,16);
+    printf("Entrer votre choix : \t ");
     scanf("%d", &choix);
 
     switch (choix) {
         case 1:
             system("cls");
-            FermetCompt();
+            print_box_with_title(10,5,100,20,"Supprimer Compte");
+            setConsoleColor(15,1);
+            gotoxy(35,15);printf("Donner le mot de passe  (4 chiffres) : ");
+            saisirMotDePasseMasque(&mdp_saisie);
+            if(authentification(numcompte,mdp_saisie)==1){
+                fermer_comptes(numcompte);
+            }else{
+                NOTIFICATION("mot de passe est incorrecte",0);
+            }
+            
             break;
         case 2:
             system("cls");
@@ -1294,14 +1689,15 @@ void Supresion_compt() {
             break;
         default:
             system("cls");
-            printf("\n⚠️ Choix invalide, retour au menu principal.\n");
-            Sleep(2000);
+            setConsoleColor(15,4);
+
+            NOTIFICATION("\nChoix invalide, retour au menu principal.\n",0);
             break;
     }
 }
 /// retourn  id histo
 int retourner_idhistori(int numcompte) {
-    FILE *fich = fopen("comptes.txt", "r");
+    FILE *fich = fopen("data/comptes.txt", "r");
     if (fich == NULL) {
         printf("Erreur d'ouverture du fichier.\n");
         return;
@@ -1327,7 +1723,7 @@ int retourner_idhistori(int numcompte) {
 }
 // calculer le solde 
 int calculer_solde(int numcompte, int montant, int numop) {
-    FILE *fich = fopen("comptes.txt", "r");
+    FILE *fich = fopen("data/comptes.txt", "r");
     if (!fich) {
         printf("Erreur d'ouverture du fichier.\n");
         return -1; // Indicate an error
@@ -1351,7 +1747,7 @@ int calculer_solde(int numcompte, int montant, int numop) {
     return -1; // Indicate that the account was not found
 }
 int modifierSolde(int idCompte, int nouveauSolde) {
-    FILE *fichier = fopen("comptes.txt", "r+"); // Open file for reading and writing
+    FILE *fichier = fopen("data/comptes.txt", "r+"); // Open file for reading and writing
     client cl;
     int trouve = 0;
 
@@ -1413,20 +1809,22 @@ int modifierSolde(int idCompte, int nouveauSolde) {
 void depot(int idEntrer) {
     int  mdp_saisie,soldEAjouter, solde;
     print_box_with_title(10,5,100,20,"***DEPOT***");
-    printf("\033[0;34;40m");
+        setConsoleColor(15,1);
+
        do {
     gotoxy(35, 11);
-    printf("Donner le montant ( >10dh): ");
-    gotoxy(35 + strlen("Donner le montant ( >10dh): "), 13);
+    printf("Donner le montant ( >100dh): ");
+    gotoxy(35 + strlen("Donner le montant ( >100dh): "), 13);
     scanf("%d", &soldEAjouter);
 
-    if (soldEAjouter < 10) {
+    if (soldEAjouter < 100) {
         gotoxy(35, 12);
         printf("Erreur: le montant doit etre >= 10dh. Veuillez reessayer.");
     } else {
         int solde = calculer_solde(idEntrer,soldEAjouter, 1);
         if (solde < 0) {
             gotoxy(35, 13);
+            setConsoleColor(4,1);
             printf("SOLDE INSUFFISANT. VEUILLEZ ENTRER UN MONTANT VALIDE.");
             soldEAjouter= -1; // Force re-entry of amount
         } else {
@@ -1444,11 +1842,15 @@ void depot(int idEntrer) {
         auth_result = authentification(idEntrer, mdp_saisie);
         if (auth_result == 0) {
             gotoxy(35, 16);
+            setConsoleColor(4,1);
             printf("Mot de passe incorrect. Veuillez reessayer.");
         }
     } while (auth_result == 0);
     if (soldEAjouter <= 0) {
+        setConsoleColor(15,4);
         NOTIFICATION("Erreur : le montant du dépôt doit être positif.\n",0);
+                resetColor();
+
         return;
     }
     solde=calculer_solde(idEntrer,soldEAjouter,0);
@@ -1456,7 +1858,7 @@ void depot(int idEntrer) {
         printf("Error updating the account file.\n");
         return;
     }
-    FILE *fichier_historique = fopen("historique.txt", "a+");
+    FILE *fichier_historique = fopen("data/historique.txt", "a+");
     if (!fichier_historique) {
         printf("Error opening history file.\n");
         return;
@@ -1464,21 +1866,22 @@ void depot(int idEntrer) {
     time_t current_time = time(NULL);
     struct tm *local_time = localtime(&current_time);
 
-    fprintf(fichier_historique,"%-12d |        %-11s      | %-13d   |    %02d/%02d/%04d    | %d \n",
+    fprintf(fichier_historique,"%-12d |        %-11s        | %-13d|    %02d/%02d/%04d    | %d \n",
             retourner_idhistori(idEntrer), "dépôt", soldEAjouter,
             local_time->tm_mday, local_time->tm_mon + 1, local_time->tm_year + 1900, solde);
     fclose(fichier_historique);
-
-    NOTIFICATION("✅ Deposit successful", 0);
+    SesionAdmin(idEntrer,"faire un dépôt");
+    setConsoleColor(15,10);
+    NOTIFICATION(" Deposit successful", 0);
     getch();
-    printf("\033[0m");
+    resetColor();
+    operation_liste(idEntrer);
 
 }
  void retrait(int idEntrer) {
     int mdp_saisie, montantRetirer, solde;
     print_box_with_title(10,5,100,20,"***Retrait***");
-    printf("\033[0;34;40m");
-   
+setConsoleColor(15,1);   
     do {
     gotoxy(35, 11);
     printf("Entrez le montant à retirer :");
@@ -1492,7 +1895,9 @@ void depot(int idEntrer) {
         solde = calculer_solde(idEntrer, montantRetirer, 1);
         if (solde < 0) {
             gotoxy(35, 12);
+            setConsoleColor(4,1);
             printf("\033[0;31mErreur : Solde insuffisant ou compte non trouvé. Veuillez réessayer.\033[0m");
+                    resetColor();
             montantRetirer = -1; // Force re-entry of amount
         } else {
             break; // Valid amount and sufficient balance
@@ -1519,7 +1924,7 @@ void depot(int idEntrer) {
     }
 
     // Record in history
-    FILE *fichier_historique = fopen("historique.txt", "a+");
+    FILE *fichier_historique = fopen("data/historique.txt", "a+");
     if (!fichier_historique) {
         printf("Error opening history file.\n");
         return;
@@ -1527,14 +1932,17 @@ void depot(int idEntrer) {
     time_t current_time = time(NULL);
     struct tm *local_time = localtime(&current_time);
 
-    fprintf(fichier_historique,"%-12d |        %-11s      | -%-12d |    %02d/%02d/%04d    | %d \n",
+    fprintf(fichier_historique,"%-12d |        %-11s      | -%-12d|    %02d/%02d/%04d    | %d \n",
             retourner_idhistori(idEntrer), "Retrait", montantRetirer,
             local_time->tm_mday, local_time->tm_mon + 1, local_time->tm_year + 1900, solde);
     fclose(fichier_historique);
-
-    NOTIFICATION("✅ Withdrawal successful.", 0);
+    SesionAdmin(idEntrer,"fait un Retrait");
+    setConsoleColor(15,10);
+    NOTIFICATION("Withdrawal successful.", 0);
     getch();
-    printf("\033[0m");
+    resetColor();
+    operation_liste(idEntrer);
+
 
 }
 void function_verment(int id_transfert) {
@@ -1543,6 +1951,7 @@ void function_verment(int id_transfert) {
 
     print_box_with_title(10, 5, 100, 20, "***Virement***");
     gotoxy(12, 7);
+    setConsoleColor(15,1);
     printf(" ⚠ INFORMATION ⚠ : Transfert entre deux comptes de la même banque ");
    do {
     gotoxy(35, 11);
@@ -1555,8 +1964,10 @@ void function_verment(int id_transfert) {
         printf("Erreur : Vous ne pouvez pas transférer de l'argent à votre propre compte.");
         getch();
     } else if (verification(id_destinataire) == 0) {
+        setConsoleColor(4,1);
         NOTIFICATION("LE COMPTE DESTINATAIRE N'EXISTE PAS. VEUILLEZ RÉESSAYER.", 0);
         getch();
+        resetColor();
         operation_liste(id_transfert);
     } else {
         break; // Exit the loop if the account exists and it's not the user's own account
@@ -1577,6 +1988,7 @@ int solde_trans;
          solde_trans = calculer_solde(id_transfert, montant, 1);
         if (solde_trans < 0) {
             gotoxy(35, 14);
+            setConsoleColor(4,1);
             printf("SOLDE INSUFFISANT. VEUILLEZ ENTRER UN MONTANT VALIDE.");
             montant = -1; // Force re-entry of amount
         } else {
@@ -1589,6 +2001,7 @@ int solde_desti = calculer_solde(id_destinataire, montant, 0);
     int auth_result;
     do {
         gotoxy(35, 15);
+        setConsoleColor(15,1);
         printf("Donner le mot de passe : ");
         gotoxy(35 + strlen("Donner le mot de passe :"), 15);
         saisirMotDePasseMasque(&mdp_saisie);
@@ -1613,7 +2026,7 @@ int solde_desti = calculer_solde(id_destinataire, montant, 0);
     tim_function();
 
     // Record in history
-    FILE *fichier_historique = fopen("historique.txt", "a+");
+    FILE *fichier_historique = fopen("data/historique.txt", "a+");
     if (!fichier_historique) {
         printf("Error opening history file.\n");
         return;
@@ -1628,18 +2041,68 @@ int solde_desti = calculer_solde(id_destinataire, montant, 0);
             retourner_idhistori(id_destinataire), "Virement", montant,
             local_time->tm_mday, local_time->tm_mon + 1, local_time->tm_year + 1900, solde_desti);
     fclose(fichier_historique);
-    FILE *fich=fopen("virements.txt","a+");
+    FILE *fich=fopen("data/virements.txt","a+");
     if (!fich) {
         printf("erreur de ecrire sue le fichier de virements .\n");
         return;
     }
     fprintf(fich, "%-8d     |       %-8d      |       %-10d | %02d/%02d/%04d\n", id_transfert, id_destinataire, montant, local_time->tm_mday, local_time->tm_mon + 1, local_time->tm_year + 1900);
     fclose(fich);
+    SesionAdmin(id_transfert,"effectuer un virment");
+            setConsoleColor(15,10);
     NOTIFICATION("✅  VIREMENT EFFECTUÉ AVEC SUCCÈS  ✅", 0);
     getch();
-    PAGEPROFIL(fichier_historique,id_transfert);
+   
+
+    resetColor();
+    operation_liste(id_transfert);
 }
 
+
+void sizezProfesionelle(client cl){
+    Entreprise dataEntreprise ; 
+    FILE *entreprise = fopen("data/entreprise.txt", "a"); 
+    if(entreprise == NULL){
+        printf("problemme d'ouverture de fichies : ");
+        exit(1); 
+    }
+    // entrer les information sur l'entreprise : 
+    print_box_with_title(10,5,100,20,"**Entreprise**");
+    setConsoleColor(15,1);   
+    gotoxy(35,11);
+    printf("Nom Entreprise : ");
+    gotoxy(35,13);
+    printf(" Code ICE : ");
+    gotoxy(35 ,15); 
+    printf("Type d'entreprise : "); 
+    gotoxy(35 , 17); 
+    printf("Adresse ; "); 
+    gotoxy(10, 25);
+    tim_function();
+
+    // Saisie des informations de connexion
+    gotoxy(35 + strlen("Nom Entreprise : "),11);
+    scanf("%s",dataEntreprise.Nomentreprise); 
+    while(getchar() != '\n');
+    gotoxy(35 + strlen(" Code ICE : "), 13);  
+    scanf("%d",&dataEntreprise.Code_iDentifant); 
+    while(getchar() != '\n');
+    gotoxy(35 + strlen("Type d'entreprise : "),15); 
+    scanf("%s", &dataEntreprise.type_entreprise); 
+    while(getchar() != '\n');
+    gotoxy(35 + strlen("Adresse ; "),17); 
+    scanf("%s", &dataEntreprise.adresentreprise); 
+    while(getchar() != '\n');
+
+    fprintf(entreprise, "Nom Entreprise     : %s\n", dataEntreprise.Nomentreprise);
+    fprintf(entreprise, "Code ICE           : %d\n", dataEntreprise.Code_iDentifant);
+    fprintf(entreprise, "Type d'Entreprise  : %s\n", dataEntreprise.type_entreprise);
+    fprintf(entreprise, "Adresse            : %s\n", dataEntreprise.adresentreprise);
+    fprintf(entreprise, "Maitre d'ouverage  : %s %s\n", cl.nom,cl.prenom);
+    fprintf(entreprise, "---------------------------------------------\n");
+    fclose(entreprise); 
+
+}
 
 /******* AUTONTIFICATION ADMIN *********/
 int authentificationAdmin( int pswd_saisie) {
@@ -1672,7 +2135,7 @@ void LOGINADMIN(){
     int  passwordadmin;
     FILE* fich;
     print_box_with_title(10,5,100,20,"**LOGIN-ADMIIN**");
-    printf("\033[0;34;40m");
+    setConsoleColor(15,1);  
     gotoxy(35,15);
     printf("Donner le mot de passe  (4 chiffres) : ");
     gotoxy(10, 25);
@@ -1729,24 +2192,26 @@ void LOGINADMIN(){
 void MENUE_ADMIN(){
 
     int choix = 0 ; 
-
+    clear_screen();
     print_box_with_title(10,5,100,20,"**MENUE_ADMIN**");
-   printf("\033[0;34;40m");
+    setConsoleColor(15,1);
     gotoxy(35,11);
     printf("1-affichage de compte  ");
-    gotoxy(35,15);
+    gotoxy(35,13);
     printf("2-affichage de client ");
+    gotoxy(35,15);
+    printf("3-cherche un compte  ");
     gotoxy(35 , 17); 
-    printf("3-affichage historique .  "); // choix pour entrer :
+    printf("4-affichage historique .  "); // choix pour entrer :
     gotoxy(35 , 19); 
-    printf("4_Activite Et transaction : "); 
+    printf("5-affichage d'activite . "); 
     gotoxy(35 , 21); 
     printf("Choix : "); 
     gotoxy(10, 25);
     tim_function();
 
     // Saisie des informations de connexion
-    gotoxy(45,21); 
+    gotoxy(35+strlen("choix : "),21); 
     scanf("%d",&choix); 
     getch(); 
 
@@ -1756,21 +2221,25 @@ void MENUE_ADMIN(){
     case 1 : 
         system("cls"); 
         // fonction AFichage information sur compt compt  . 
-        AFichageCOMPt(); 
+        affichagecompteadmin(); 
 
         break;
     case 2 : 
         system("cls"); 
-        // Afichage client :  
-        AFICHaclient(); 
+       AFICHAGECLIENTADMIN();
         break; 
     case 3: 
         system("cls"); 
-        // afichage historique : 
+        SearchClientADmin();
         break; 
-     case 4 : 
+ 
+    case 4: 
         system("cls"); 
-        // fonction activite : 
+        AFICHAGEHISTORIQUEAdmin();
+        break; 
+     case 5 : 
+        system("cls"); 
+        SesionAdmin(); 
         break; 
     default:
         // retour au page initiale . 
@@ -1778,12 +2247,12 @@ void MENUE_ADMIN(){
         break;
     }
 }
-void AFichageCOMPt() {
+void affichagecompteadmin() {
     FILE *fich;
     client cl; // Une variable pour stocker les informations de chaque compte
 
     // Ouvrir le fichier en mode lecture
-    fich = fopen("comptes.txt", "r");
+    fich = fopen("data/comptes.txt", "r");
     if (fich == NULL) {
         printf("Erreur d'ouverture du fichier Comp.text\n");
         exit(1); // Arrêter l'exécution en cas d'erreur
@@ -1794,19 +2263,19 @@ void AFichageCOMPt() {
 
     // Titre de l'affichage
     printf("\n");
-    printf("┌────────────────────────────────────────────────────────────────────────┐\n");
-    printf("│                        Liste des Comptes                               │\n");
-    printf("└────────────────────────────────────────────────────────────────────────┘\n");
+    printf("┌──────────────────────────────────────────────────────────────────────────────────────────┐\n");
+    printf("│                                    Liste des Comptes                                     │\n");
+    printf("└──────────────────────────────────────────────────────────────────────────────────────────┘\n");
     printf("\n");
 
     // Affichage de l'entête
-    printf("ID Compte   | Type Compte    | Solde      | Mot de Passe | ID Historique | DATE DE CREATION\n");
+    printf("ID Compte   | Type Compte   | Solde    | Mot de Passe | ID Historique   | DATE DE CREATION\n");
     printf("-----------------------------------------------------------------------------------------\n");
 
 
     // Lecture et affichage des données de chaque compte
-      while (fscanf(fich, "%d %s %s %d/%d/%d %s %d %d %d\n", &cl.c.Ncompte, cl.nom, cl.prenom, 
-                  &cl.c.dcreation.jour, &cl.c.dcreation.mois, &cl.c.dcreation.anne, cl.c.typecompte,
+    while (fscanf(fich, "%d %s %s %d/%d/%d %s %d %d %d\n", &cl.c.Ncompte, cl.nom, cl.prenom, 
+                  &cl.c.dcreation.jour, &cl.c.dcreation.mois, &cl.c.dcreation.anne, cl.c.typecompte, 
                   &cl.c.solde, &cl.c.password, &cl.c.h.idhistorique) != EOF) { // ID historique associé au compte
     
         // Affichage des informations du compte avec une mise en forme verticale
@@ -1815,48 +2284,127 @@ void AFichageCOMPt() {
 
     // Fermer le fichier
     fclose(fich);
-    getchar();
+    getch();
+    resetColor();
     MENUE_ADMIN();
 }
-void AFICHaclient(){
-    FILE *fich ; 
-    client c ; 
-    // afichage des information du client : 
-    fich = fopen("data/clients.bin","r"); 
-    if(fich == NULL){
-        printf("problemme dans le fichies "); 
-        exit(1); 
+
+void AFICHAGEHISTORIQUEAdmin() {
+    FILE *fich;
+    historique historique_operation; // Une variable pour stocker les informations de chaque compte
+    int id_compt;
+
+    // Ouvrir le fichier en mode lecture
+    fich = fopen("data/historique.txt", "r");
+    if (fich == NULL) {
+        printf("Erreur : Impossible d'ouvrir le fichier 'historique.txt'.\n");
+        return; 
     }
+
+    system("color F0");
+
+    printf("\n");
+    printf("┌───────────────────────────────────────────────────────────────────────────────────────┐\n");
+    printf("│                                         Historique                                    │\n");
+    printf("└───────────────────────────────────────────────────────────────────────────────────────┘\n");
+    printf("\n");
+    char line[256];
+    fgets(line, sizeof(line),fich);
+    fgets(line, sizeof(line),fich);
+
+    // Affichage de l'entête
+    printf("ID HISTORIQUE|    TYPE D'OPERATION     | MONTANT      | DATE D'OPERATION |   SOLDE\n");
+    printf("--------------------------------------------------------------------------------------\n");
+    // lecture du donnes dans le fichies historique 
+    while (fgets(line, sizeof(line), fich) != NULL){
+        printf("%s\n", line);
+    }
+
+   
+
+    fclose(fich); 
+    /*printf("\n\n");
+    gotoxy(30, 20);
+    system("color 04"); // Fond noir, texte rouge
+    printf("┌────────────┐\n");
+    printf("│ [ Retour ] │\n");
+    printf("└────────────┘\n");*/
+    getch(); 
+    resetColor();
+    MENUE_ADMIN();
+
+}
+
+void AFICHAGECLIENTADMIN() {
+    client client_data;
+    FILE *fich;
+    fich = fopen("data/clients.bin", "rb");
+
+    if (fich == NULL) {
+        printf("Problème dans l'ouverture du fichier.\n");
+        exit(1);
+    }
+
+    system("color F0");
+      // Top Border
+    printf("┌──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐\n");
+    printf("│                                                               CLIENTS                                                            │\n");
+    printf("└──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘\n");
+
+    // Table Header
+    printf("ID CLIENT │ NOM        │ PRENOM     │ ADRESSE                       │ TELEPHONE    │ ID COMPTE │ DATE NAISSANCE │ LIEU DE NAISSANCE\n");
+    printf("──────────┼────────────┼────────────┼───────────────────────────────┼──────────────┼───────────┼────────────────┼──────────────────\n");
+
+    // Reading and displaying client information
+    while (fread(&client_data, sizeof(client_data), 1, fich) == 1) {
+        printf("%-10d│ %-11s│ %-11s│ %-30s│ +212%-9s │ %-9d │ %02d/%02d/%04d     │ %-17s\n",
+               client_data.idclient,
+               client_data.nom,
+               client_data.prenom,
+               client_data.adress,
+               client_data.phone,
+               client_data.c.Ncompte,
+               client_data.d.jour,
+               client_data.d.mois,
+               client_data.d.anne,
+               client_data.lieudenaissa);
+    }
+
+    // Bottom Border
+    printf("─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────-────\n");
+
+
+    fclose(fich); 
+    gotoxy(10,25); 
+    printf("<rotour "); 
+    getch();           
+    // rappele au fonction menue admiin au depart
+    system("cls");
+      resetColor();
+    MENUE_ADMIN(); 
+}
+void SesionAdmin(int id_ompt , char nom_service[20]){
+    // fonction qui permet de remplir les donnes des activites qui realiser les clients : 
+    FILE *fich_admin; 
+    fich_admin = fopen("data/session.txt", "a"); 
+    if(fich_admin == NULL){
+        printf("problemme dans l'ouverture de fichies "); 
+    }
+    time_t current_time = time(NULL);
+    struct tm *local_time = localtime(&current_time);
+    // remplir le fichies seison . 
+    fprintf(fich_admin , "%-15d | %-16s | %02d/%02d/%04d %02d:%02d:%02d\n",
+                                    id_ompt ,
+                                    nom_service , 
+                                    local_time->tm_mday, 
+                                    local_time->tm_mon + 1 ,
+                                    local_time->tm_year + 1900,
+                                    local_time->tm_hour , 
+                                    local_time->tm_min,
+                                    local_time->tm_sec);
     
-    system("color 01");
-    while (fscanf(fich, "%d %s %s %s %c %s %s %s %d-%d-%d", 
-                &c.idclient, c.CIN, c.nom, c.prenom, &c.sexe, c.adress, c.phone, c.lieudenaissa, 
-                &c.d.jour, &c.d.mois, &c.d.anne) == 11) {
-        
-        printf("\n");
-        printf("┌────────────────────────────────────────────────────────────────────────┐\n");
-        printf("│                         Détails du Client                              │\n");
-        printf("└────────────────────────────────────────────────────────────────────────┘\n");
-        printf("\n");
-
-        // Affichage des informations du client avec mise en forme
-        printf("ID Client        : %-20d\n", c.idclient);
-        printf("CIN              : %-20s\n", c.CIN);
-        printf("Nom              : %-20s\n", c.nom);
-        printf("Prénom           : %-20s\n", c.prenom);
-        printf("Sexe             : %-20c\n", c.sexe);
-        printf("Adresse          : %-20s\n", c.adress);
-        printf("Téléphone        : %-20s\n", c.phone);
-        printf("Lieu de Naissance: %-20s\n", c.lieudenaissa);
-        printf("Date de Naissance: %02d-%02d-%04d\n", c.d.jour, c.d.mois, c.d.anne);
-        printf("\033[0m");
-    }
-    getchar();
-    MENUE_ADMIN();
+    fclose(fich_admin);
 }
-
-
-
 /*void move_cursor_to_top() {
     printf("\033[H");  // Move the cursor to the top-left corner
 }
@@ -1905,25 +2453,65 @@ void movingBanner() {
     }
 }
 */
+void SearchClientADmin(){    
+    FILE *fichCompt; 
+    client compt_search; 
+    int idCompt_serach; 
+    int var_trouver = 0;
 
+    // Titre de la recherche
+    print_box_with_title(10, 5, 100, 20, "**Search**");
+    setConsoleColor(15,1);
+    gotoxy(35, 11);  // Déplacer le curseur à une position spécifique (nécessite conio.h sous Windows)
+    printf("Donner le numero de compte (5 chiffres) : ");
+    gotoxy(35 , 12); 
+    printf("╔═══════════════════════════════════════════╗");
+    gotoxy(35 , 13); 
+    printf("║                                           ║ ");
+    gotoxy(35 , 14); 
+    printf("╚═══════════════════════════════════════════╝");
+
+    
+    // Saisie des informations de recherche
+    gotoxy(38, 13); 
+    scanf("%d", &idCompt_serach);
+    clear_box_content(10,5,100,20); 
+    afficher_compte(idCompt_serach,1);
+    getch();
+
+}
+void AfichageSesionAdmin(){
+    FILE *fichsesion ; 
+    fichsesion = fopen("data/sesion.txt" , "r"); 
+    if(fichsesion == NULL){
+        printf(" problemme dans l'ouverture de fiches "); 
+        exit(1) ; 
+    }
+    system("color F0");
+    printf("NUMERO_COMPTE   | TYPE_Service        |  Date \n");
+    printf("------------------------------------------------\n");
+    char line[256];
+    fgets(line, sizeof(line), fichsesion); //pour ignorer les deux premiere ligne .  
+    fgets(line, sizeof(line), fichsesion); 
+    while (fgets(line, sizeof(line), fichsesion) != NULL) {
+    printf("%s\n", line);
+    }
+    fclose(fichsesion); 
+
+    gotoxy(20 , 35);
+    printf("<< Retou >>\n");
+    getch(); 
+    resetColor();
+    MENUE_ADMIN();
+    // rappelle au fonction menue admin pour routour au meni : 
+}
 int main() {
     setlocale(LC_ALL, "fr_FR.UTF-8");  
     SetConsoleOutputCP(65001);
     system("cls");
-    
-    afficher_menu(); 
+    setConsoleColor(15, 1); 
+    //interface1();    
+    afficher_menu();
     return 0;
 }
-
-/*int main() {
-    
-    system("COLOR 01");
-    system("cls");
-   /*int data[] = {5, 10, 7, 12, 8};
-    displayBarGraph(data, 5);
-    progressBar(); */
-   
-
-    
-   // interface1();
-    //afficher_menu();    
+ 

@@ -1,0 +1,13 @@
+
+Nom Entreprise     : zaaaki
+Code ICE           : 1230
+Type d'Entreprise  : 1230
+Adresse            : 99
+Maitre d'ouverage  : achraf akourradi
+---------------------------------------------
+Nom Entreprise     : ACER
+Code ICE           : 4546455
+Type d'Entreprise  : COMMERCE
+Adresse            : CENTRE
+Maitre d'ouverage  : boulanouar walid
+---------------------------------------------
